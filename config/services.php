@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'golf_api' => [
+        'base_url' => env('GOLF_API_BASE_URL'),
+        'timeout' => (int) env('GOLF_API_TIMEOUT', 15),
+        'connect_timeout' => (int) env('GOLF_API_CONNECT_TIMEOUT', 5),
+    ],
+
 ];

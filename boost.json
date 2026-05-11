@@ -6,10 +6,14 @@
     "guidelines": true,
     "mcp": true,
     "nightwatch": false,
+    "packages": [
+        "nativephp/mobile"
+    ],
     "sail": false,
     "skills": [
         "laravel-best-practices",
         "pest-testing",
-        "tailwindcss-development"
+        "tailwindcss-development",
+        "nativephp-mobile"
     ]
 }

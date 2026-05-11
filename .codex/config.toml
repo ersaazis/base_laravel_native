@@ -1,4 +1,7 @@
 [mcp_servers.laravel-boost]
-command = "php"
-args = ["artisan", "boost:mcp"]
-cwd = "C:\\Users\\ersaa\\Documents\\DevOps\\code\\test_mobile\\my-app"
+command = "wsl.exe"
+args = ["/usr/bin/php8.4", "/home/ersaazis/test_mobile/artisan", "boost:mcp"]
+cwd = "/home/ersaazis/test_mobile"
+
+[mcp_servers.laravel-boost.tools.search-docs]
+approval_mode = "approve"

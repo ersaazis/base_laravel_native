@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/var/www/html
+  jump:
+    build:
+      context: .
+    ports:
+      - "8100:8100"
+    volumes:
+      - .:/var/www/html

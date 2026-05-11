@@ -8,4 +8,361 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-vault-bg: #050505;
+    --color-vault-bg-deep: #000000;
+    --color-vault-surface: #111111;
+    --color-vault-card: #181818;
+    --color-vault-card-high: #242424;
+    --color-vault-border: #3f3f3f;
+    --color-vault-border-muted: #2d2d2d;
+    --color-vault-text: #f5f5f5;
+    --color-vault-muted: #d4d4d4;
+    --color-vault-dim: #a3a3a3;
+    --color-vault-primary: #ffffff;
+    --color-vault-primary-strong: #e5e5e5;
+    --color-vault-danger: #ffffff;
+    --color-vault-success: #ffffff;
+    --color-vault-warning: #ffffff;
+}
+
+@layer base {
+    html {
+        background: var(--color-vault-bg);
+        color: var(--color-vault-text);
+    }
+
+    body {
+        min-height: 100vh;
+        overflow-x: hidden;
+        background:
+            radial-gradient(circle at 50% -12%, rgba(255, 255, 255, 0.08), transparent 42rem),
+            linear-gradient(180deg, var(--color-vault-bg) 0%, var(--color-vault-bg-deep) 100%);
+        overscroll-behavior: none;
+        touch-action: manipulation;
+    }
+
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    a,
+    input,
+    select,
+    textarea,
+    summary {
+        outline-color: var(--color-vault-primary);
+        outline-offset: 3px;
+    }
+
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    summary:focus-visible {
+        outline: 2px solid var(--color-vault-primary);
+    }
+
+    ::selection {
+        background: var(--color-vault-primary);
+        color: var(--color-vault-bg-deep);
+    }
+}
+
+@layer components {
+    .mobile-screen {
+        min-height: calc(100vh - var(--inset-top, 0px) - var(--inset-bottom, 0px));
+        min-height: calc(100dvh - var(--inset-top, 0px) - var(--inset-bottom, 0px));
+    }
+
+    .vault-pattern {
+        position: relative;
+        isolation: isolate;
+    }
+
+    .vault-pattern::before {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        content: '';
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+        background-position: -1px -1px;
+        background-size: 2rem 2rem;
+        opacity: 0.5;
+        mask-image: linear-gradient(to bottom, black 0%, transparent 80%);
+    }
+
+    .vault-card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background:
+            linear-gradient(180deg, rgba(28, 28, 28, 0.98), rgba(10, 10, 10, 0.96));
+        box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.44), 0 0 1.5rem rgba(255, 255, 255, 0.035);
+        backdrop-filter: blur(1.25rem);
+    }
+
+    .vault-card-muted {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(24, 24, 24, 0.86);
+        box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.32);
+    }
+
+    .vault-icon-tile {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.5);
+        color: var(--color-vault-primary);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 0 1.25rem rgba(255, 255, 255, 0.06);
+    }
+
+    .vault-notification-active {
+        border-color: rgba(255, 255, 255, 0.7);
+        background:
+            radial-gradient(circle at 68% 22%, rgba(255, 255, 255, 0.18), transparent 1.4rem),
+            rgba(0, 0, 0, 0.72);
+        color: var(--color-vault-warning);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 1.35rem rgba(255, 255, 255, 0.1);
+    }
+
+    .vault-notification-active svg {
+        fill: rgba(255, 255, 255, 0.16);
+    }
+
+    .vault-title {
+        color: var(--color-vault-text);
+        font-weight: 750;
+        letter-spacing: 0;
+        text-shadow: 0 0.125rem 0.75rem rgba(255, 255, 255, 0.12);
+    }
+
+    .vault-muted {
+        color: var(--color-vault-muted);
+    }
+
+    .vault-dim {
+        color: var(--color-vault-dim);
+    }
+
+    .vault-label {
+        color: var(--color-vault-muted);
+        font-size: 0.875rem;
+        font-weight: 700;
+        line-height: 1.25rem;
+    }
+
+    .vault-input {
+        min-height: 3.5rem;
+        width: 100%;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(24, 24, 24, 0.62);
+        color: var(--color-vault-text);
+        font-size: 1rem;
+        line-height: 1.5rem;
+        transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+    }
+
+    .vault-input::placeholder {
+        color: rgba(212, 212, 212, 0.52);
+    }
+
+    .vault-input:focus {
+        border-color: var(--color-vault-primary);
+        background: rgba(38, 38, 38, 0.7);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16);
+        outline: none;
+    }
+
+    .vault-input[aria-invalid='true'] {
+        border-color: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+    }
+
+    .vault-btn {
+        display: inline-flex;
+        min-height: 3.25rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.625rem;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        font-weight: 800;
+        line-height: 1.25rem;
+        transition: opacity 180ms ease, scale 180ms ease, border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+    }
+
+    .vault-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    button[data-processing='true'] {
+        position: relative;
+        pointer-events: none;
+    }
+
+    button[data-processing='true']:disabled {
+        opacity: 0.78;
+    }
+
+    button[data-processing='true'] > * {
+        opacity: 0.36;
+    }
+
+    button[data-processing='true']::after {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 1.125rem;
+        height: 1.125rem;
+        margin-top: -0.5625rem;
+        margin-left: -0.5625rem;
+        border: 2px solid rgba(245, 245, 245, 0.35);
+        border-top-color: currentColor;
+        border-radius: 9999px;
+        content: '';
+        transform: translate(-50%, -50%);
+    }
+
+    .vault-btn-primary {
+        background: var(--color-vault-primary);
+        color: var(--color-vault-bg-deep);
+        box-shadow: 0 0 1.125rem rgba(255, 255, 255, 0.18);
+    }
+
+    .vault-btn-primary:hover {
+        background: var(--color-vault-primary-strong);
+    }
+
+    .vault-btn-secondary {
+        border: 1px solid rgba(212, 212, 212, 0.5);
+        background: rgba(0, 0, 0, 0.28);
+        color: var(--color-vault-text);
+    }
+
+    .vault-btn-secondary:hover {
+        border-color: var(--color-vault-primary);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .vault-btn-danger {
+        border: 1px solid rgba(255, 255, 255, 0.42);
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--color-vault-danger);
+    }
+
+    .vault-chip {
+        display: inline-flex;
+        min-height: 2rem;
+        align-items: center;
+        gap: 0.375rem;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.375rem 0.75rem;
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 800;
+        line-height: 1rem;
+    }
+
+    .vault-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.16);
+    }
+
+    .biometric-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        display: grid;
+        min-height: 100dvh;
+        place-items: center;
+        padding: calc(var(--inset-top, 0px) + 1rem) 1rem calc(var(--inset-bottom, 0px) + 1.5rem);
+        background: rgba(0, 0, 0, 0.88);
+        backdrop-filter: blur(1.5rem);
+    }
+
+    .biometric-overlay[hidden] {
+        display: none;
+    }
+
+    .biometric-ring {
+        position: relative;
+        display: grid;
+        width: 8rem;
+        height: 8rem;
+        place-items: center;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        background: rgba(16, 16, 16, 0.96);
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.52), 0 0 2rem rgba(255, 255, 255, 0.1);
+    }
+
+    .biometric-ring::before,
+    .biometric-ring::after {
+        position: absolute;
+        inset: -2rem;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: inherit;
+        content: '';
+    }
+
+    .biometric-ring::after {
+        inset: -3.75rem;
+        opacity: 0.42;
+    }
+
+    .two-factor-qr svg {
+        display: block;
+        width: 14rem;
+        height: 14rem;
+        max-width: 100%;
+        margin-inline: auto;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    button[data-processing='true']::after {
+        animation: button-processing-spin 720ms linear infinite;
+    }
+
+    .biometric-ring::before {
+        animation: biometric-pulse 1.8s ease-out infinite;
+    }
+}
+
+@keyframes button-processing-spin {
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+@keyframes biometric-pulse {
+    0% {
+        opacity: 0.2;
+        scale: 0.9;
+    }
+
+    70% {
+        opacity: 0.42;
+    }
+
+    100% {
+        opacity: 0;
+        scale: 1.24;
+    }
 }

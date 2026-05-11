@@ -255,7 +255,7 @@ return [
     */
 
     'permissions' => [
-        'biometric' => false,
+        'biometric' => 'Use biometrics to unlock your secure mobile session.',
         'camera' => false,
         'microphone' => false,
         'microphone_background' => false,

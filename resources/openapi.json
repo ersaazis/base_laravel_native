@@ -1,1 +1,1693 @@
-{"openapi":"3.1.0","info":{"title":"Golf Web Specialist API","version":"1.0.0","description":"Development-only OpenAPI documentation for auth, profile, access, security, and notification APIs."},"servers":[{"url":"http:\/\/192.168.0.199:8000\/api\/v1","description":"API v1"}],"components":{"securitySchemes":{"bearerAuth":{"type":"http","scheme":"bearer","bearerFormat":"Sanctum token"}},"schemas":{"ApiSuccess":{"type":"object","properties":{"message":{"type":"string"},"data":{"type":"object"}}},"ValidationError":{"type":"object","properties":{"message":{"type":"string"},"errors":{"type":"object","additionalProperties":{"type":"array","items":{"type":"string"}}}}},"User":{"type":"object","properties":{"id":{"type":"integer","example":1},"name":{"type":"string","example":"Jane Doe"},"email":{"type":"string","format":"email","example":"jane@example.com"},"email_verified_at":{"type":["string","null"],"format":"date-time"}}},"Notification":{"type":"object","properties":{"id":{"type":"string"},"title":{"type":"string"},"message":{"type":"string"},"url":{"type":["string","null"]},"level":{"type":"string","enum":["info","success","warning","error"]},"read":{"type":"boolean"},"read_at":{"type":["string","null"],"format":"date-time"},"created_at":{"type":["string","null"],"format":"date-time"},"created_at_human":{"type":["string","null"]}}}}},"paths":{"\/auth\/signup":{"post":{"tags":["Auth"],"summary":"Create an account and issue a Sanctum token.","requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"name":"Jane Doe","email":"jane@example.com","password":"password","password_confirmation":"password","device_name":"iPhone 15"}}}},"responses":{"201":{"description":"Success","content":{"application\/json":{"example":{"message":"Authenticated.","data":{"user":{"id":1,"name":"Jane Doe","email":"jane@example.com"},"plain_text_token":"1|sanctum-token"}}}}},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/site-config":{"get":{"tags":["Site Config"],"summary":"Get public site configuration for clients.","responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":{"config":{"site_name":"Laravel","site_description":"Public site description.","logo_url":null,"favicon_url":null,"apple_touch_icon_url":null,"registration_enabled":true,"seo":{"title":"Laravel","description":"Public SEO description.","keywords":"","robots":"index, follow","og_title":"","og_description":"","og_image_mode":"auto","custom_og_image_url":null,"og_image_url":null,"custom_meta":[]}}}}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/auth\/login":{"post":{"tags":["Auth"],"summary":"Authenticate and issue a Sanctum token.","requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"email":"jane@example.com","password":"password","device_name":"Postman","two_factor_code":"123456","recovery_code":"optional-recovery-code"}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Authenticated.","data":{"user":{"id":1,"name":"Jane Doe","email":"jane@example.com"},"plain_text_token":"1|sanctum-token"}}}}},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/auth\/logout":{"post":{"tags":["Auth"],"summary":"Revoke the current token.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/auth\/forgot-password":{"post":{"tags":["Auth"],"summary":"Send a password reset link.","requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"email":"jane@example.com"}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/auth\/reset-password":{"post":{"tags":["Auth"],"summary":"Reset password using an email token.","requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"token":"reset-token","email":"jane@example.com","password":"new-password","password_confirmation":"new-password"}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile":{"get":{"tags":["Profile"],"summary":"Get the authenticated user profile.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}},"patch":{"tags":["Profile"],"summary":"Update profile name and email.","security":[{"bearerAuth":[]}],"requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"name":"Jane Updated","email":"jane.updated@example.com"}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/access":{"get":{"tags":["Profile"],"summary":"Get role and permission map for the authenticated user.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":{"role":{"id":1,"name":"Administrator","key":"administrator"},"permissions":{"users":["view-active","create"]}}}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/security\/password":{"put":{"tags":["Security"],"summary":"Update the authenticated user password.","security":[{"bearerAuth":[]}],"requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"current_password":"password","password":"new-password","password_confirmation":"new-password"}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/security\/two-factor":{"get":{"tags":["Security"],"summary":"Get two-factor authentication status.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}},"post":{"tags":["Security"],"summary":"Enable two-factor authentication.","security":[{"bearerAuth":[]}],"requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"force":false}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}},"delete":{"tags":["Security"],"summary":"Disable two-factor authentication.","security":[{"bearerAuth":[]}],"requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"current_password":"password"}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/security\/two-factor\/confirm":{"post":{"tags":["Security"],"summary":"Confirm two-factor authentication with an authenticator code.","security":[{"bearerAuth":[]}],"requestBody":{"required":true,"content":{"application\/json":{"schema":{"type":"object"},"example":{"code":"123456"}}}},"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/security\/two-factor\/qr-code":{"get":{"tags":["Security"],"summary":"Get the two-factor QR code SVG and otpauth URL.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/security\/two-factor\/recovery-codes":{"get":{"tags":["Security"],"summary":"Get two-factor recovery codes.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}},"post":{"tags":["Security"],"summary":"Regenerate two-factor recovery codes.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/notifications":{"get":{"tags":["Notifications"],"summary":"List notifications for the authenticated user.","security":[{"bearerAuth":[]}],"parameters":[{"name":"limit","in":"query","schema":{"type":"integer","minimum":1,"maximum":100,"default":15}}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/notifications\/{notification}\/read":{"patch":{"tags":["Notifications"],"summary":"Mark one notification as read.","security":[{"bearerAuth":[]}],"parameters":[{"name":"notification","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}},"\/profile\/notifications\/read-all":{"patch":{"tags":["Notifications"],"summary":"Mark all notifications as read.","security":[{"bearerAuth":[]}],"responses":{"200":{"description":"Success","content":{"application\/json":{"example":{"message":"Success.","data":[]}}}},"401":{"description":"Unauthenticated"},"404":{"description":"Not found"},"422":{"description":"Validation error","content":{"application\/json":{"schema":{"$ref":"#\/components\/schemas\/ValidationError"}}}}}}}}}
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Golf Web Specialist 1 API",
+        "version": "1.0.0",
+        "description": "Development-only OpenAPI documentation for auth, profile, access, security, and notification APIs."
+    },
+    "servers": [
+        {
+            "url": "http:\/\/10.16.209.234:8000\/api\/v1",
+            "description": "API v1"
+        }
+    ],
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "Sanctum token"
+            }
+        },
+        "schemas": {
+            "ApiSuccess": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                }
+            },
+            "ValidationError": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "User": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Jane Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jane@example.com"
+                    },
+                    "email_verified_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                }
+            },
+            "Notification": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "level": {
+                        "type": "string",
+                        "enum": [
+                            "info",
+                            "success",
+                            "warning",
+                            "error"
+                        ]
+                    },
+                    "read": {
+                        "type": "boolean"
+                    },
+                    "read_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at_human": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "paths": {
+        "\/auth\/signup": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Create an account and issue a Sanctum token.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "name": "Jane Doe",
+                                "email": "jane@example.com",
+                                "password": "password",
+                                "password_confirmation": "password",
+                                "device_name": "iPhone 15"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Authenticated.",
+                                    "data": {
+                                        "user": {
+                                            "id": 1,
+                                            "name": "Jane Doe",
+                                            "email": "jane@example.com"
+                                        },
+                                        "plain_text_token": "1|sanctum-token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/site-config": {
+            "get": {
+                "tags": [
+                    "Site Config"
+                ],
+                "summary": "Get public site configuration for clients.",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": {
+                                        "config": {
+                                            "site_name": "Laravel",
+                                            "site_description": "Public site description.",
+                                            "logo_url": null,
+                                            "favicon_url": null,
+                                            "apple_touch_icon_url": null,
+                                            "registration_enabled": true,
+                                            "languages": {
+                                                "current": "en",
+                                                "default": "en",
+                                                "enabled": [
+                                                    {
+                                                        "locale": "en",
+                                                        "name": "English",
+                                                        "native_name": "English"
+                                                    },
+                                                    {
+                                                        "locale": "zh",
+                                                        "name": "Chinese",
+                                                        "native_name": "\u4e2d\u6587"
+                                                    },
+                                                    {
+                                                        "locale": "es",
+                                                        "name": "Spanish",
+                                                        "native_name": "Espa\u00f1ol"
+                                                    },
+                                                    {
+                                                        "locale": "id",
+                                                        "name": "Indonesian",
+                                                        "native_name": "Indonesia"
+                                                    },
+                                                    {
+                                                        "locale": "de",
+                                                        "name": "German",
+                                                        "native_name": "Deutsch"
+                                                    },
+                                                    {
+                                                        "locale": "fr",
+                                                        "name": "French",
+                                                        "native_name": "Fran\u00e7ais"
+                                                    }
+                                                ]
+                                            },
+                                            "seo": {
+                                                "title": "Laravel",
+                                                "description": "Public SEO description.",
+                                                "keywords": "",
+                                                "robots": "index, follow",
+                                                "og_title": "",
+                                                "og_description": "",
+                                                "og_image_mode": "auto",
+                                                "custom_og_image_url": null,
+                                                "og_image_url": null,
+                                                "custom_meta": []
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/auth\/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Authenticate with email and password.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "email": "jane@example.com",
+                                "password": "password",
+                                "device_name": "Postman"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Authenticated without two-factor authentication",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Authenticated.",
+                                    "data": {
+                                        "two_factor": false,
+                                        "user": {
+                                            "id": 1,
+                                            "name": "Jane Doe",
+                                            "email": "jane@example.com"
+                                        },
+                                        "plain_text_token": "1|sanctum-token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "202": {
+                        "description": "Two-factor authentication is required",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Two factor authentication required.",
+                                    "data": {
+                                        "two_factor": true,
+                                        "challenge_token": "temporary-challenge-token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/auth\/two-factor-challenge": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Complete a two-factor login challenge with an authenticator code and issue a Sanctum token.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "challenge_token": "temporary-challenge-token",
+                                "code": "123456"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Authenticated after two-factor challenge",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Authenticated.",
+                                    "data": {
+                                        "two_factor": true,
+                                        "user": {
+                                            "id": 1,
+                                            "name": "Jane Doe",
+                                            "email": "jane@example.com"
+                                        },
+                                        "plain_text_token": "1|sanctum-token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/auth\/two-factor-recovery-code": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Complete a two-factor login challenge with a recovery code and issue a Sanctum token.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "challenge_token": "temporary-challenge-token",
+                                "recovery_code": "recovery-code"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Authenticated after two-factor recovery code challenge",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Authenticated.",
+                                    "data": {
+                                        "two_factor": true,
+                                        "user": {
+                                            "id": 1,
+                                            "name": "Jane Doe",
+                                            "email": "jane@example.com"
+                                        },
+                                        "plain_text_token": "1|sanctum-token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/auth\/logout": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Revoke the current token.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/auth\/check-token": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Check whether the current Sanctum token is active.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": {
+                                        "active": true,
+                                        "user": {
+                                            "id": 1,
+                                            "name": "Jane Doe",
+                                            "email": "jane@example.com"
+                                        },
+                                        "expires_at": "2026-06-08T12:00:00.000000Z"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/auth\/forgot-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Send a password reset link.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "email": "jane@example.com"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/auth\/reset-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset password using an email token.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "token": "reset-token",
+                                "email": "jane@example.com",
+                                "password": "new-password",
+                                "password_confirmation": "new-password"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get the authenticated user profile.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update profile name and email.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "name": "Jane Updated",
+                                "email": "jane.updated@example.com"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/access": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get role and permission map for the authenticated user.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": {
+                                        "role": {
+                                            "id": 1,
+                                            "name": "Administrator",
+                                            "key": "administrator"
+                                        },
+                                        "permissions": {
+                                            "users": [
+                                                "view-active",
+                                                "create"
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/security\/password": {
+            "put": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Update the authenticated user password.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "current_password": "password",
+                                "password": "new-password",
+                                "password_confirmation": "new-password"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/security\/two-factor": {
+            "get": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Get two-factor authentication status.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Enable two-factor authentication.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "force": false
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Disable two-factor authentication.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "current_password": "password"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/security\/two-factor\/confirm": {
+            "post": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Confirm two-factor authentication with an authenticator code.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "code": "123456"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/security\/two-factor\/qr-code": {
+            "get": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Get the two-factor QR code SVG and otpauth URL.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/security\/two-factor\/recovery-codes": {
+            "get": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Get two-factor recovery codes.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Regenerate two-factor recovery codes.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "List notifications for the authenticated user.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/notifications\/{notification}\/read": {
+            "patch": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark one notification as read.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "notification",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        },
+        "\/profile\/notifications\/read-all": {
+            "patch": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark all notifications as read.",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application\/json": {
+                                "example": {
+                                    "message": "Success.",
+                                    "data": []
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "$ref": "#\/components\/schemas\/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "parameters": [
+                {
+                    "name": "lang",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": [
+                            "en",
+                            "zh",
+                            "es",
+                            "id",
+                            "de",
+                            "fr"
+                        ]
+                    },
+                    "description": "Enabled language locale used for localized response messages. For write requests, lang may also be sent in the JSON or form body when the query parameter is absent."
+                }
+            ]
+        }
+    }
+}

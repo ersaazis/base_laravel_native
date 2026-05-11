@@ -1,7 +1,7 @@
 <?php
 
-test('the application returns a successful response', function () {
+test('startup screen renders for guests', function () {
     $response = $this->get('/');
 
-    $response->assertStatus(200);
+    $response->assertOk();
 });

@@ -9,7 +9,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.3
+- php - 8.4
 - laravel/boost (BOOST) - v2
 - laravel/framework (LARAVEL) - v12
 - laravel/mcp (MCP) - v0
@@ -108,6 +108,13 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
+=== tests rules ===
+
+# Test Enforcement
+
+- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+
 === laravel/core rules ===
 
 # Do Things the Laravel Way
@@ -147,12 +154,12 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Laravel 12 Structure
 
-- In Laravel 12, middleware are no longer registered in `app\Http/Kernel.php`.
+- In Laravel 12, middleware are no longer registered in `app/Http/Kernel.php`.
 - Middleware are configured declaratively in `bootstrap/app.php` using `Application::configure()->withMiddleware()`.
 - `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
 - `bootstrap/providers.php` contains application specific service providers.
-- The `app\Console/Kernel.php` file no longer exists; use `bootstrap/app.php` or `routes/console.php` for console configuration.
-- Console commands in `app\Console/Commands/` are automatically available and do not require manual registration.
+- The `app/Console/Kernel.php` file no longer exists; use `bootstrap/app.php` or `routes/console.php` for console configuration.
+- Console commands in `app/Console/Commands/` are automatically available and do not require manual registration.
 
 ## Database
 
@@ -178,5 +185,38 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - The `{name}` argument should not include the test suite directory. Use `php artisan make:test --pest SomeFeatureTest` instead of `php artisan make:test --pest Feature/SomeFeatureTest`.
 - Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
 - Do NOT delete tests without approval.
+
+=== nativephp/mobile rules ===
+
+## NativePHP Mobile
+
+- NativePHP Mobile is a Laravel package for building native iOS and Android apps using PHP and native UI components. It runs a full PHP runtime directly on the device with SQLite — no web server required.
+- Documentation: `https://nativephp.com/docs/mobile/3/**`
+- IMPORTANT: Always activate the `nativephp-mobile` skill every time you work on any NativePHP functionality.
+
+### Build Commands — Tell the User, Never Run
+
+**CRITICAL: Never execute any of these commands yourself. Always instruct the user to run them manually in their terminal.**
+
+| Command | Purpose |
+|---|---|
+| `npm run build -- --mode=ios` | Build frontend assets for iOS |
+| `npm run build -- --mode=android` | Build frontend assets for Android |
+| `php artisan native:run ios` | Compile and run on iOS simulator/device |
+| `php artisan native:run android` | Compile and run on Android emulator/device |
+| `php artisan native:run ios --watch` | Build, deploy, then start hot reload — all in one |
+| `php artisan native:watch` | Hot reload (watch for file changes) |
+| `php artisan native:open` | Open project in Xcode or Android Studio |
+
+**Always ask which platform before giving any build or run command.** If the user hasn't specified iOS or Android, ask: "Which platform do you want to build/test on — iOS or Android?" Never assume a platform.
+
+When the platform is confirmed, give the relevant command(s) above and tell the user to run it in their terminal. Do not run it yourself.
+</laravel-boost-guidelines>
+
+</laravel-boost-guidelines>
+
+</laravel-boost-guidelines>
+
+</laravel-boost-guidelines>
 
 </laravel-boost-guidelines>
