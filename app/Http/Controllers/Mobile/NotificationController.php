@@ -8,6 +8,7 @@ use App\Services\MobileApiClient;
 use App\Services\MobileApiException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class NotificationController extends Controller
@@ -25,8 +26,10 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function status(): JsonResponse
+    public function status(Request $request): JsonResponse
     {
+        $request->session()->keep(['status', 'errors', '_old_input']);
+
         $payload = $this->notificationPayload(30);
 
         return response()->json([

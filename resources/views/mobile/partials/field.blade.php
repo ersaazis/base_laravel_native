@@ -45,8 +45,13 @@
         @if ($inputmode) inputmode="{{ $inputmode }}" @endif
     >
         @if ($togglePassword)
-            <button class="absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-vault-muted transition hover:text-vault-text" type="button" data-password-toggle="{{ $name }}" aria-label="{{ __('mobile.common.toggle_password') }}">
-                @include('mobile.partials.icon', ['name' => 'eye-off', 'class' => 'size-5'])
+            <button class="absolute right-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-vault-muted transition hover:text-vault-text" type="button" data-password-toggle="{{ $name }}" aria-label="{{ __('mobile.common.toggle_password') }}" aria-pressed="false">
+                <span data-password-icon-show>
+                    @include('mobile.partials.icon', ['name' => 'eye', 'class' => 'size-5'])
+                </span>
+                <span hidden data-password-icon-hide>
+                    @include('mobile.partials.icon', ['name' => 'eye-off', 'class' => 'size-5'])
+                </span>
             </button>
         @endif
     </span>

@@ -4,9 +4,6 @@
             <div>
                 <h1 class="text-3xl font-black text-vault-text">{{ __('mobile.notifications.title') }}</h1>
             </div>
-            <div class="vault-icon-tile size-12 rounded-full">
-                @include('mobile.partials.icon', ['name' => 'bell', 'class' => 'size-6'])
-            </div>
         </div>
 
         <form method="POST" action="{{ route('notifications.read-all') }}">

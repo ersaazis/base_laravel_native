@@ -13,7 +13,7 @@
         <!-- Styles -->
         <style>
                 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-                html { font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; line-height: 1.5; }
+                html { font-family: 'Helvetica Neue', Helvetica, Arial, ui-sans-serif, system-ui, sans-serif; line-height: 1.5; }
                 body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%); }
                 @media (prefers-color-scheme: dark) {
                     body { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); color: #ededec; }

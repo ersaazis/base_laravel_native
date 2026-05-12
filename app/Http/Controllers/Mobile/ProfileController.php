@@ -10,6 +10,7 @@ use App\Services\MobileApiClient;
 use App\Services\MobileApiException;
 use App\Services\MobileCredentialStore;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\App;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -28,7 +29,6 @@ class ProfileController extends Controller
         return view('mobile.profile.edit', [
             'profile' => $this->credentials->user(),
             'role' => is_array($access['role'] ?? null) ? $access['role'] : [],
-            'biometricsEnabled' => $this->credentials->biometricsEnabled(),
             'languages' => $this->credentials->enabledLanguages(),
             'activeLocale' => $this->credentials->activeLocale(),
         ]);
@@ -51,7 +51,10 @@ class ProfileController extends Controller
 
     public function updateLanguage(LocaleUpdateRequest $request): RedirectResponse
     {
-        $this->credentials->updateLocale((string) $request->validated('locale'));
+        $locale = (string) $request->validated('locale');
+
+        $this->credentials->updateLocale($locale);
+        App::setLocale($locale);
 
         return redirect()
             ->to($request->safeRedirectUrl('profile.edit'))

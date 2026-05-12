@@ -131,6 +131,18 @@ return [
         'storage/logs/laravel.log',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Runtime Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'runtime' => [
+        'mode' => env('NATIVEPHP_RUNTIME_MODE', 'persistent'),
+        'reset_instances' => env('NATIVEPHP_RUNTIME_RESET_INSTANCES', true),
+        'gc_between_dispatches' => env('NATIVEPHP_RUNTIME_GC_BETWEEN_DISPATCHES', false),
+    ],
+
     'android' => [
         'gradle_jdk_path' => env('NATIVEPHP_GRADLE_PATH'),
         'android_sdk_path' => env('NATIVEPHP_ANDROID_SDK_LOCATION'),
@@ -234,7 +246,7 @@ return [
     |
     | Here you may enable or disable specific native features for your app.
     | Setting a permission to true allows NativePHP to request the necessary
-    | access from the operating system at runtime (e.g., for NFC, biometrics,
+    | access from the operating system at runtime (e.g., for NFC, camera,
     | or push notifications).
     |
     | For iOS, you can also provide a custom string that explains why your
@@ -255,7 +267,6 @@ return [
     */
 
     'permissions' => [
-        'biometric' => 'Use biometrics to unlock your secure mobile session.',
         'camera' => false,
         'microphone' => false,
         'microphone_background' => false,

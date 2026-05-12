@@ -4,9 +4,25 @@ namespace App\Services;
 
 use App\Models\MobileCredential;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
 
 class MobileCredentialStore
 {
+    private const ClientCookie = 'mobile_client_id';
+
+    private const ClientCookieMinutes = 2_628_000;
+
+    private static int $credentialRevision = 0;
+
+    private ?MobileCredential $cachedCredential = null;
+
+    private bool $credentialLoaded = false;
+
+    private int $loadedRevision = -1;
+
+    private ?string $clientId = null;
+
     /**
      * @return array<string, mixed>
      */
@@ -30,7 +46,53 @@ class MobileCredentialStore
 
     public function credential(): ?MobileCredential
     {
-        return MobileCredential::query()->latest('id')->first();
+        if (! $this->credentialLoaded || $this->loadedRevision !== self::$credentialRevision) {
+            $this->cachedCredential = MobileCredential::query()
+                ->where('client_id', $this->clientId())
+                ->latest('id')
+                ->first();
+            $this->credentialLoaded = true;
+            $this->loadedRevision = self::$credentialRevision;
+        }
+
+        return $this->cachedCredential;
+    }
+
+    public function clientId(): string
+    {
+        $cookie = request()->cookie(self::ClientCookie);
+
+        if (is_string($cookie) && Str::isUuid($cookie)) {
+            if ($this->clientId !== null && $this->clientId !== $cookie) {
+                $this->credentialLoaded = false;
+            }
+
+            return $this->clientId = $cookie;
+        }
+
+        if ($this->clientId !== null) {
+            return $this->clientId;
+        }
+
+        if (app()->runningUnitTests()) {
+            return $this->clientId = 'test-client';
+        }
+
+        $this->clientId = (string) Str::uuid();
+
+        Cookie::queue(Cookie::make(
+            self::ClientCookie,
+            $this->clientId,
+            self::ClientCookieMinutes,
+            '/',
+            null,
+            null,
+            true,
+            false,
+            'Lax',
+        ));
+
+        return $this->clientId;
     }
 
     public function token(): ?string
@@ -84,6 +146,13 @@ class MobileCredentialStore
         return is_array($config) ? $config : $this->fallbackSiteConfig();
     }
 
+    public function siteConfigFetchedAt(): ?Carbon
+    {
+        $fetchedAt = $this->credential()?->site_config_fetched_at;
+
+        return $fetchedAt instanceof Carbon ? $fetchedAt : null;
+    }
+
     /**
      * @return array<int, array{locale: string, name: string, native_name: string}>
      */
@@ -133,24 +202,26 @@ class MobileCredentialStore
      */
     public function storeToken(string $token, array $user = []): MobileCredential
     {
+        $clientId = $this->clientId();
         $existing = $this->credential();
         $locale = $existing?->locale;
         $siteConfig = $existing?->site_config;
         $siteConfigFetchedAt = $existing?->site_config_fetched_at;
 
-        MobileCredential::query()->delete();
+        MobileCredential::query()
+            ->where('client_id', $clientId)
+            ->delete();
 
-        return MobileCredential::query()->create([
+        return $this->setChangedCredential(MobileCredential::query()->create([
+            'client_id' => $clientId,
             'plain_text_token' => $token,
             'user' => $user,
             'access' => [],
             'locale' => is_string($locale) ? $locale : null,
             'site_config' => is_array($siteConfig) ? $siteConfig : null,
             'site_config_fetched_at' => $siteConfigFetchedAt,
-            'locked' => false,
             'last_validated_at' => now(),
-            'unlocked_at' => now(),
-        ]);
+        ]));
     }
 
     /**
@@ -158,7 +229,14 @@ class MobileCredentialStore
      */
     public function updateUser(array $user): void
     {
-        $this->credential()?->forceFill(['user' => $user])->save();
+        $credential = $this->credential();
+
+        if (! $credential instanceof MobileCredential) {
+            return;
+        }
+
+        $credential->forceFill(['user' => $user])->save();
+        $this->setChangedCredential($credential);
     }
 
     /**
@@ -166,12 +244,22 @@ class MobileCredentialStore
      */
     public function updateAccess(array $access): void
     {
-        $this->credential()?->forceFill(['access' => $access])->save();
+        $credential = $this->credential();
+
+        if (! $credential instanceof MobileCredential) {
+            return;
+        }
+
+        $credential->forceFill(['access' => $access])->save();
+        $this->setChangedCredential($credential);
     }
 
     public function updateLocale(string $locale): void
     {
-        $this->ensureCredential()->forceFill(['locale' => $locale])->save();
+        $credential = $this->ensureCredential();
+
+        $credential->forceFill(['locale' => $locale])->save();
+        $this->setChangedCredential($credential);
     }
 
     /**
@@ -179,11 +267,14 @@ class MobileCredentialStore
      */
     public function updateSiteConfig(array $siteConfig): void
     {
-        $this->ensureCredential()->forceFill([
+        $credential = $this->ensureCredential();
+
+        $credential->forceFill([
             'site_config' => $siteConfig,
             'site_config_fetched_at' => now(),
         ])->save();
 
+        $this->setChangedCredential($credential);
         $this->ensureValidLocale();
     }
 
@@ -200,7 +291,14 @@ class MobileCredentialStore
 
     public function markValidated(): void
     {
-        $this->credential()?->forceFill(['last_validated_at' => now()])->save();
+        $credential = $this->credential();
+
+        if (! $credential instanceof MobileCredential) {
+            return;
+        }
+
+        $credential->forceFill(['last_validated_at' => now()])->save();
+        $this->setChangedCredential($credential);
     }
 
     public function needsTokenCheck(): bool
@@ -222,72 +320,36 @@ class MobileCredentialStore
             'plain_text_token' => null,
             'user' => [],
             'access' => [],
-            'biometrics_enabled' => false,
-            'locked' => false,
             'last_validated_at' => null,
-            'unlocked_at' => null,
         ])->save();
-    }
 
-    public function biometricsEnabled(): bool
-    {
-        return (bool) $this->credential()?->biometrics_enabled;
-    }
-
-    public function enableBiometrics(): void
-    {
-        $this->credential()?->forceFill([
-            'biometrics_enabled' => true,
-            'locked' => false,
-            'unlocked_at' => now(),
-        ])->save();
-    }
-
-    public function disableBiometrics(): void
-    {
-        $this->credential()?->forceFill([
-            'biometrics_enabled' => false,
-            'locked' => false,
-            'unlocked_at' => now(),
-        ])->save();
-    }
-
-    public function lock(): void
-    {
-        $this->credential()?->forceFill(['locked' => true])->save();
-    }
-
-    public function unlock(): void
-    {
-        $this->credential()?->forceFill([
-            'locked' => false,
-            'unlocked_at' => now(),
-        ])->save();
-    }
-
-    public function shouldRequireUnlock(): bool
-    {
-        $credential = $this->credential();
-
-        if (! $credential instanceof MobileCredential || ! $credential->biometrics_enabled) {
-            return false;
-        }
-
-        if ($credential->locked) {
-            return true;
-        }
-
-        return ! $credential->unlocked_at instanceof Carbon
-            || $credential->unlocked_at->lt(now()->subMinutes(15));
+        $this->setChangedCredential($credential);
     }
 
     private function ensureCredential(): MobileCredential
     {
-        return $this->credential() ?? MobileCredential::query()->create([
+        return $this->credential() ?? $this->setChangedCredential(MobileCredential::query()->create([
+            'client_id' => $this->clientId(),
             'access' => [],
             'site_config' => $this->fallbackSiteConfig(),
             'site_config_fetched_at' => null,
-        ]);
+        ]));
+    }
+
+    private function setCredential(?MobileCredential $credential): ?MobileCredential
+    {
+        $this->cachedCredential = $credential;
+        $this->credentialLoaded = true;
+        $this->loadedRevision = self::$credentialRevision;
+
+        return $credential;
+    }
+
+    private function setChangedCredential(?MobileCredential $credential): ?MobileCredential
+    {
+        self::$credentialRevision++;
+
+        return $this->setCredential($credential);
     }
 
     private function siteConfigDefaultLocale(): string

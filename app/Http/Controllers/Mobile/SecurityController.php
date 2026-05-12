@@ -25,13 +25,14 @@ class SecurityController extends Controller
 
     public function index(Request $request): View
     {
+        $access = $this->credentials->access();
         $twoFactor = $this->safeData('/profile/security/two-factor');
         $twoFactorEnabled = $this->twoFactorEnabled($twoFactor) || session('two_factor_recently_confirmed') === true;
         $setupRequested = $request->boolean('setup') || session('two_factor_setup_requested') === true;
 
         return view('mobile.security.index', [
             'profile' => $this->credentials->user(),
-            'role' => is_array($this->credentials->access()['role'] ?? null) ? $this->credentials->access()['role'] : [],
+            'role' => is_array($access['role'] ?? null) ? $access['role'] : [],
             'twoFactor' => $twoFactor,
             'twoFactorEnabled' => $twoFactorEnabled,
             'setupRequested' => $setupRequested,
@@ -113,7 +114,10 @@ class SecurityController extends Controller
         try {
             $this->api->authenticated('post', '/profile/security/two-factor/recovery-codes');
 
-            return back()->with('status', __('mobile.security.recovery_regenerated'));
+            return redirect()
+                ->route('security.index')
+                ->withFragment('recovery-codes')
+                ->with('status', __('mobile.security.recovery_regenerated'));
         } catch (MobileApiException $exception) {
             return $this->backWithApiError($exception);
         }

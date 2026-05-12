@@ -36,7 +36,12 @@ class LocaleUpdateRequest extends FormRequest
     {
         $redirectTo = $this->input('redirect_to');
 
-        if (is_string($redirectTo) && $this->isLocalUrl($redirectTo) && $this->supportsGet($redirectTo)) {
+        if (
+            is_string($redirectTo)
+            && $this->isLocalUrl($redirectTo)
+            && ! $this->isStartupCheckUrl($redirectTo)
+            && $this->supportsGet($redirectTo)
+        ) {
             return $redirectTo;
         }
 
@@ -77,5 +82,10 @@ class LocaleUpdateRequest extends FormRequest
         } catch (MethodNotAllowedHttpException|NotFoundHttpException) {
             return false;
         }
+    }
+
+    private function isStartupCheckUrl(string $url): bool
+    {
+        return parse_url($url, PHP_URL_PATH) === parse_url(route('startup.check'), PHP_URL_PATH);
     }
 }

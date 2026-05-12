@@ -38,8 +38,12 @@ class SiteConfig
     /**
      * @return array<string, mixed>
      */
-    public function refresh(): array
+    public function refresh(bool $force = false): array
     {
+        if (! $force && ! $this->shouldRefresh()) {
+            return $this->config = $this->credentials->siteConfig();
+        }
+
         try {
             $response = $this->api->guest('get', '/site-config');
             $data = is_array($response['data'] ?? null) ? $response['data'] : [];
@@ -65,6 +69,13 @@ class SiteConfig
     public function registrationEnabled(): bool
     {
         return $this->get()['registration_enabled'];
+    }
+
+    private function shouldRefresh(): bool
+    {
+        $fetchedAt = $this->credentials->siteConfigFetchedAt();
+
+        return $fetchedAt === null || $fetchedAt->lt(now()->subMinutes(30));
     }
 
     private function stringValue(mixed $value, string $fallback): string

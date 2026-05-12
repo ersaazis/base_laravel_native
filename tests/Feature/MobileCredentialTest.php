@@ -4,7 +4,10 @@ use App\Models\MobileCredential;
 use App\Services\MobileApiClient;
 use App\Services\MobileCredentialStore;
 use App\Services\OpenApiSpec;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 test('login page renders for guests', function () {
     Http::preventStrayRequests();
@@ -14,7 +17,7 @@ test('login page renders for guests', function () {
         ->assertDontSee('<footer', false)
         ->assertDontSee('<native:bottom-nav', false)
         ->assertDontSee('bottom-nav-item', false)
-        ->assertSee('data-biometric-overlay', false)
+        ->assertDontSee('data-biometric-overlay', false)
         ->assertDontSee('biometric-progress', false)
         ->assertDontSee('Secure access to your vault')
         ->assertDontSee('data-biometric-login', false)
@@ -99,6 +102,50 @@ test('email password login stores a sanctum token', function () {
     expect($credential->user)->toMatchArray(user_payload());
 });
 
+test('mobile credentials are isolated per client cookie', function () {
+    $webClient = (string) Str::uuid();
+    $jumpClient = (string) Str::uuid();
+
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/auth/login') => Http::response([
+            'message' => 'Authenticated.',
+            'data' => [
+                'two_factor' => false,
+                'user' => user_payload(),
+                'plain_text_token' => '1|web-token',
+            ],
+        ]),
+        api_url('/site-config') => site_config_response(false),
+        api_url('/auth/check-token') => Http::response([
+            'message' => 'Success.',
+            'data' => ['active' => true, 'user' => user_payload()],
+        ]),
+    ]);
+
+    $this->withCookie('mobile_client_id', $webClient)
+        ->post(route('login.store'), [
+            'email' => 'web@example.com',
+            'password' => 'password',
+        ])
+        ->assertRedirect(route('dashboard'));
+
+    expect(MobileCredential::query()->where('client_id', $webClient)->exists())->toBeTrue();
+
+    $this->withCookie('mobile_client_id', $jumpClient)
+        ->post(route('startup.check'))
+        ->assertRedirect(route('login'));
+
+    expect(MobileCredential::query()
+        ->where('client_id', $webClient)
+        ->whereNotNull('plain_text_token')
+        ->exists())->toBeTrue();
+    expect(MobileCredential::query()
+        ->where('client_id', $jumpClient)
+        ->whereNotNull('plain_text_token')
+        ->exists())->toBeFalse();
+});
+
 test('startup renders site config branding', function () {
     app(MobileCredentialStore::class)->updateSiteConfig(site_config_payload(false, [
         'site_name' => 'Golf Specialist',
@@ -111,6 +158,16 @@ test('startup renders site config branding', function () {
         ->assertSee('https://example.com/logo.png');
 });
 
+test('startup loading screen does not render a header bar', function () {
+    app(MobileCredentialStore::class)->storeToken('1|sanctum-token', user_payload());
+
+    $this->get(route('startup'))
+        ->assertOk()
+        ->assertSee('data-startup-screen', false)
+        ->assertDontSee('<header', false)
+        ->assertDontSee('border-b border-vault-border/40 bg-vault-bg', false);
+});
+
 test('startup check redirects guests to login', function () {
     Http::preventStrayRequests();
     Http::fake([
@@ -118,6 +175,26 @@ test('startup check redirects guests to login', function () {
     ]);
 
     $this->post(route('startup.check'))->assertRedirect(route('login'));
+});
+
+test('startup check has get and javascript fallback for native jump webviews', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/site-config') => site_config_response(false),
+    ]);
+
+    $this->get(route('startup'))
+        ->assertOk()
+        ->assertSee('data-startup-check', false)
+        ->assertSee('method="GET"', false)
+        ->assertSee('data-startup-check-url', false)
+        ->assertSee('<noscript>', false)
+        ->assertSee('http-equiv="refresh"', false)
+        ->assertSee('window.location.replace', false)
+        ->assertDontSee('startupForm.submit()', false)
+        ->assertDontSee('startupForm.requestSubmit()', false);
+
+    $this->get(route('startup.check'))->assertRedirect(route('login'));
 });
 
 test('startup check accepts native jump auto submits without a csrf cookie', function () {
@@ -161,83 +238,84 @@ test('startup check clears invalid tokens', function () {
     expect(app(MobileCredentialStore::class)->isAuthenticated())->toBeFalse();
 });
 
-test('startup check redirects locked biometric sessions to unlock', function () {
-    Http::preventStrayRequests();
-    Http::fake([
-        api_url('/site-config') => site_config_response(false),
-        api_url('/auth/check-token') => Http::response([
-            'message' => 'Success.',
-            'data' => ['active' => true, 'user' => user_payload()],
-        ]),
-    ]);
-
-    $credentials = app(MobileCredentialStore::class);
-    $credentials->storeToken('1|sanctum-token', user_payload());
-    $credentials->enableBiometrics();
-    $credentials->lock();
-
-    $this->post(route('startup.check'))->assertRedirect(route('settings.unlock'));
-});
-
-test('startup check requires unlock when biometrics are enabled on app launch', function () {
-    Http::preventStrayRequests();
-    Http::fake([
-        api_url('/site-config') => site_config_response(false),
-        api_url('/auth/check-token') => Http::response([
-            'message' => 'Success.',
-            'data' => ['active' => true, 'user' => user_payload()],
-        ]),
-    ]);
-
-    $credentials = app(MobileCredentialStore::class);
-    $credentials->storeToken('1|sanctum-token', user_payload());
-    $credentials->enableBiometrics();
-
-    $this->post(route('startup.check'))->assertRedirect(route('settings.unlock'));
-
-    expect($credentials->credential()?->locked)->toBeTrue();
-});
-
-test('unlock screen starts biometric confirmation automatically', function () {
-    $credentials = app(MobileCredentialStore::class);
-    $credentials->storeToken('1|sanctum-token', user_payload());
-    $credentials->enableBiometrics();
-    $credentials->lock();
-
-    $this->get(route('settings.unlock'))
-        ->assertOk()
-        ->assertSee('data-biometric-form', false)
-        ->assertSee('data-biometric-auto-submit', false)
-        ->assertSee('data-biometric-verified', false)
-        ->assertDontSee('biometric-progress', false);
-});
-
-test('biometric prompt sends native bridge method explicitly', function () {
+test('native double back to close plugin is registered and enabled from dashboard shell', function () {
+    $layout = file_get_contents(resource_path('views/layouts/app.blade.php'));
     $script = file_get_contents(resource_path('js/app.js'));
+    $provider = file_get_contents(app_path('Providers/NativeServiceProvider.php'));
+    $composer = json_decode(file_get_contents(base_path('composer.json')), true);
+
+    expect($layout)
+        ->toContain("'doubleBackToClose' => __('mobile.common.double_back_to_close')")
+        ->toContain("'doubleBackToClose' => \$showsMobileLayout")
+        ->not->toContain('mobile-biometrics')
+        ->not->toContain('biometricsPluginInstalled');
 
     expect($script)
-        ->toContain("body.set('method', method)")
-        ->toContain('params[${key}]')
-        ->toContain("nativeBridgeCall('Biometric.Prompt', { id: 'mobile-auth' })")
-        ->not->toContain("biometric.prompt().id('mobile-auth')");
+        ->toContain('function syncDoubleBackToClose')
+        ->toContain('let doubleBackToCloseEnabled = false')
+        ->toContain("routePath(url) === '/home'")
+        ->toContain('DoubleBackToClose.Enable')
+        ->toContain('DoubleBackToClose.Disable')
+        ->toContain('mobileMessages.doubleBackToClose')
+        ->not->toContain('Biometric');
+
+    expect($provider)
+        ->toContain('DoubleBackToCloseServiceProvider::class')
+        ->toContain('DialogServiceProvider::class');
+
+    expect(array_key_exists('codingwithrk/double-back-to-close', $composer['require']))->toBeTrue();
+    expect(array_key_exists('nativephp/mobile-dialog', $composer['require']))->toBeTrue();
 });
 
 test('mobile buttons show processing state to prevent duplicate clicks', function () {
     $script = file_get_contents(resource_path('js/app.js'));
     $styles = file_get_contents(resource_path('css/app.css'));
+    $feedback = file_get_contents(resource_path('views/layouts/partials/feedback.blade.php'));
 
     expect($script)
         ->toContain('function setButtonProcessing')
+        ->toContain('const processingTimeouts = new WeakMap()')
+        ->toContain('function resetProcessingStates')
+        ->toContain('scheduleProcessingReset(button, () => setButtonProcessing(button, false))')
+        ->toContain('scheduleProcessingReset(form, () => setFormProcessing(form, false), 15000)')
         ->toContain("button.dataset.processing = 'true'")
         ->toContain("button.setAttribute('aria-busy', 'true')")
-        ->toContain('setFormProcessing(form, true)')
-        ->toContain("button.matches('[data-copy-value]')")
-        ->toContain("window.addEventListener('pageshow'");
+        ->toContain('setFormProcessing(form, true, event.submitter)')
+        ->toContain('[data-copy-value]')
+        ->toContain("button.matches('[data-copy-value], [data-password-toggle]')")
+        ->toContain("window.addEventListener('pageshow'")
+        ->not->toContain("document.addEventListener('pointerdown'")
+        ->not->toContain('data-biometric-cancel');
 
     expect($styles)
         ->toContain("button[data-processing='true']")
-        ->toContain("button[data-processing='true']::after")
-        ->toContain('button-processing-spin');
+        ->toContain('pointer-events: none')
+        ->toContain('opacity: 0.42')
+        ->not->toContain("button[data-processing='true']::after")
+        ->not->toContain('button-processing-spin');
+});
+
+test('password toggle swaps icon and pressed state', function () {
+    $field = file_get_contents(resource_path('views/mobile/partials/field.blade.php'));
+    $icons = file_get_contents(resource_path('views/mobile/partials/icon.blade.php'));
+    $script = file_get_contents(resource_path('js/app.js'));
+
+    expect($field)
+        ->toContain('aria-pressed="false"')
+        ->toContain('data-password-icon-show')
+        ->toContain('data-password-icon-hide')
+        ->toContain("'name' => 'eye'")
+        ->toContain("'name' => 'eye-off'");
+
+    expect($icons)->toContain("@case('eye')");
+
+    expect($script)
+        ->toContain("const revealing = input.type === 'password'")
+        ->toContain("button.setAttribute('aria-pressed', revealing ? 'true' : 'false')")
+        ->toContain("button.querySelector('[data-password-icon-show]')")
+        ->toContain("button.querySelector('[data-password-icon-hide]')")
+        ->toContain('showIcon.hidden = revealing')
+        ->toContain('hideIcon.hidden = !revealing');
 });
 
 test('mobile color palette is monochrome', function () {
@@ -257,6 +335,196 @@ test('mobile color palette is monochrome', function () {
     expect($tabs)
         ->toContain('rgba(255,255,255,0.14)')
         ->not->toContain('rgba(56,189,248,0.22)');
+});
+
+test('mobile typography uses helvetica font stack', function () {
+    $styles = file_get_contents(resource_path('css/app.css'));
+    $welcome = file_get_contents(resource_path('views/welcome.blade.php'));
+
+    expect($styles)
+        ->toContain("--font-sans: 'Helvetica Neue', Helvetica, Arial")
+        ->toContain('font-family: var(--font-sans)')
+        ->not->toContain('Instrument Sans');
+
+    expect($welcome)
+        ->toContain("'Helvetica Neue', Helvetica, Arial")
+        ->not->toContain('Instrument Sans');
+});
+
+test('mobile shell uses svelte spa navigation', function () {
+    $layout = file_get_contents(resource_path('views/layouts/app.blade.php'));
+    $script = file_get_contents(resource_path('js/app.js'));
+    $spa = file_get_contents(resource_path('js/mobile-spa.svelte'));
+    $package = json_decode(file_get_contents(base_path('package.json')), true);
+    $viteConfig = file_get_contents(base_path('vite.config.js'));
+
+    expect($layout)
+        ->toContain('data-mobile-spa-root')
+        ->toContain('data-mobile-runtime-config')
+        ->toContain('data-mobile-spa-controller');
+
+    expect($script)
+        ->toContain("import { mount } from 'svelte'")
+        ->toContain("import MobileSpa from './mobile-spa.svelte'")
+        ->toContain('window.mobileApp')
+        ->toContain('initializeMobilePage')
+        ->toContain('options.animate !== false')
+        ->toContain('initializeMobileToasts');
+
+    expect($spa)
+        ->toContain("document.addEventListener('click', onClick)")
+        ->toContain("document.addEventListener('submit', onSubmit)")
+        ->toContain('currentRoot.replaceWith(nextRoot)')
+        ->toContain("Accept: 'text/html, application/xhtml+xml'")
+        ->toContain("cache: 'no-store'")
+        ->toContain("'Cache-Control': 'no-cache'")
+        ->toContain("Pragma: 'no-cache'")
+        ->toContain('let navigationVersion = 0')
+        ->toContain('function nextNavigationVersion')
+        ->toContain('function isCurrentNavigation')
+        ->toContain('navigationId: result.navigationId')
+        ->toContain('function syncDocumentMetadata')
+        ->toContain('document.documentElement.lang = nextDocument.documentElement.lang')
+        ->toContain('document.body.className = nextDocument.body.className')
+        ->toContain('function showRouteSkeleton')
+        ->toContain('function updateBottomNavigation')
+        ->toContain('document.querySelector(bottomNavSelector)')
+        ->toContain("item.classList.toggle('is-active', active)")
+        ->toContain('content.replaceChildren(routeSkeleton(url))')
+        ->toContain('function samePage')
+        ->toContain('beforeScrollTop')
+        ->toContain('animate: false')
+        ->toContain('window.mobileApp?.setFormProcessing?.(form, false)')
+        ->toContain('event.stopImmediatePropagation()')
+        ->toContain("if (error instanceof DOMException && error.name === 'AbortError')")
+        ->toContain('abortController === controller')
+        ->toContain("historyMode: 'replace'")
+        ->not->toContain('mobileSpaNavigating');
+
+    expect(array_key_exists('svelte', $package['devDependencies']))->toBeTrue();
+    expect(array_key_exists('@sveltejs/vite-plugin-svelte', $package['devDependencies']))->toBeTrue();
+    expect($viteConfig)->toContain('svelte()');
+});
+
+test('mobile runtime avoids jump hot reload and expensive webview effects', function () {
+    $viteConfig = file_get_contents(base_path('vite.config.js'));
+    $nativeConfig = file_get_contents(config_path('nativephp.php'));
+    $styles = file_get_contents(resource_path('css/app.css'));
+    $mobileLayout = file_get_contents(resource_path('views/layouts/mobile.blade.php'));
+    $appLayout = file_get_contents(resource_path('views/layouts/app.blade.php'));
+    $plainLayout = file_get_contents(resource_path('views/layouts/plain.blade.php'));
+    $script = file_get_contents(resource_path('js/app.js'));
+    $spa = file_get_contents(resource_path('js/mobile-spa.svelte'));
+
+    expect($viteConfig)
+        ->toContain('refresh: false')
+        ->toContain('hmr: false')
+        ->not->toContain('refresh: true')
+        ->not->toContain('hmr: {');
+
+    expect($nativeConfig)
+        ->toContain("'runtime' => [")
+        ->toContain("'mode' => env('NATIVEPHP_RUNTIME_MODE', 'persistent')")
+        ->toContain("'reset_instances' => env('NATIVEPHP_RUNTIME_RESET_INSTANCES', true)")
+        ->toContain("'gc_between_dispatches' => env('NATIVEPHP_RUNTIME_GC_BETWEEN_DISPATCHES', false)");
+
+    expect($styles)
+        ->not->toContain('backdrop-filter')
+        ->not->toContain('scale:')
+        ->toContain('transform: scale(0.985)')
+        ->toContain('.mobile-bottom-nav-item.is-active')
+        ->toContain('.mobile-route-skeleton')
+        ->toContain('.mobile-skeleton-block')
+        ->toContain('.mobile-performance-mode .vault-pattern::before')
+        ->toContain('.mobile-performance-mode .vault-card')
+        ->toContain('box-shadow: none');
+
+    expect($appLayout)
+        ->toContain('mobile-performance-mode')
+        ->toContain("'performanceMode' => true")
+        ->toContain("'spaTimeout' => 10000");
+
+    expect($script)
+        ->toContain('function isPerformanceMode')
+        ->toContain('if (reduceMotion || isPerformanceMode())')
+        ->toContain('function stopNotificationRefresh')
+        ->toContain('notificationRefreshInFlight')
+        ->toContain('}, 2500)')
+        ->toContain('Math.max(30000')
+        ->toContain('startupForm.isConnected')
+        ->toContain('window.location.replace(startupForm.dataset.startupCheckUrl || startupForm.action)')
+        ->toContain('syncDoubleBackToClose')
+        ->not->toContain('startupForm.requestSubmit()')
+        ->not->toContain('startupForm.submit()')
+        ->not->toContain('autoBiometricForm');
+
+    expect($spa)
+        ->toContain('window.mobileSecurity?.spaTimeout || 10000')
+        ->toContain('controller.abort()');
+
+    expect($mobileLayout)
+        ->toContain('data-notification-refresh="60000"')
+        ->toContain('data-mobile-home-logo')
+        ->toContain('data-mobile-nav-item="home"')
+        ->toContain('data-mobile-nav-item="profile"')
+        ->toContain("request()->routeIs('profile.*', 'settings.*', 'security.*')")
+        ->not->toContain('shadow-[0_0_18px')
+        ->not->toContain('backdrop-blur');
+
+    expect($plainLayout)
+        ->not->toContain('backdrop-blur');
+});
+
+test('two factor setup actions preserve the mobile spa scroll position', function () {
+    $view = file_get_contents(resource_path('views/mobile/security/index.blade.php'));
+    $spa = file_get_contents(resource_path('js/mobile-spa.svelte'));
+
+    expect($view)
+        ->toContain("route('security.two-factor.enable')")
+        ->toContain("route('security.two-factor.cancel')")
+        ->toContain("route('security.two-factor.recovery-codes')");
+
+    expect(substr_count($view, 'data-spa-preserve-scroll'))->toBeGreaterThanOrEqual(3);
+
+    expect($spa)
+        ->toContain('function shouldPreserveFormScroll')
+        ->toContain("form.hasAttribute('data-spa-preserve-scroll')")
+        ->toContain('shouldPreserveFormScroll(form, method, beforeUrl, finalUrl)');
+});
+
+test('flash feedback renders as fixed mobile toast without changing content layout', function () {
+    $credentials = app(MobileCredentialStore::class);
+    $credentials->storeToken('1|sanctum-token', user_payload());
+    $credentials->updateAccess(['role' => ['name' => 'Administrator']]);
+    $script = file_get_contents(resource_path('js/app.js'));
+    $styles = file_get_contents(resource_path('css/app.css'));
+    $feedback = file_get_contents(resource_path('views/layouts/partials/feedback.blade.php'));
+
+    $this->withSession(['status' => 'Password updated.'])
+        ->get(route('profile.edit'))
+        ->assertOk()
+        ->assertSee('Password updated.')
+        ->assertSee('mobile-toast-region', false)
+        ->assertSee('data-mobile-toast', false)
+        ->assertSee('mobile-toast-close', false)
+        ->assertSee('Dismiss notification')
+        ->assertDontSee('mb-4 rounded-2xl border border-vault-success', false);
+
+    expect($script)
+        ->toContain('function dismissMobileToast')
+        ->toContain("toast.addEventListener('click'")
+        ->toContain("event.key === 'Enter' || event.key === ' '")
+        ->toContain('dismissMobileToast(toast)');
+
+    expect($styles)
+        ->toContain('.mobile-toast-close')
+        ->toContain('width: 2.75rem')
+        ->toContain('cursor: pointer')
+        ->toContain('.mobile-toast:focus-visible');
+
+    expect($feedback)
+        ->toContain('\Native\Mobile\Facades\Dialog::toast($toastMessage)')
+        ->toContain('! app()->runningUnitTests()');
 });
 
 test('email password login redirects to two factor challenge when required', function () {
@@ -492,18 +760,42 @@ test('authenticated layout renders home and profile bottom navigation items', fu
         ->assertDontSee('Secure access to your vault')
         ->assertSee('Home')
         ->assertSee('Profile')
+        ->assertSee('data-mobile-bottom-nav', false)
         ->assertDontSee('label="Vault"', false)
         ->assertDontSee('label="Activity"', false)
         ->assertDontSee('label="Security"', false)
+        ->assertDontSee('<native:bottom-nav-item', false)
         ->assertDontSee('<footer', false)
         ->assertDontSee('Settings</');
 
     $mobileLayout = file_get_contents(resource_path('views/layouts/mobile.blade.php'));
 
-    expect($mobileLayout)->toContain('id="home" icon="home"')
+    expect($mobileLayout)->toContain('data-mobile-bottom-nav')
+        ->toContain("'name' => 'home'")
+        ->toContain('data-mobile-home-logo')
         ->not->toContain('id="vault"')
         ->not->toContain('id="activity"')
-        ->not->toContain('id="security"');
+        ->not->toContain('id="security"')
+        ->not->toContain('<native:bottom-nav-item');
+});
+
+test('security pages keep profile bottom navigation active and logo links home', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/profile/security/two-factor') => Http::response([
+            'message' => 'Success.',
+            'data' => ['enabled' => false],
+        ]),
+    ]);
+
+    app(MobileCredentialStore::class)->storeToken('1|sanctum-token', user_payload());
+
+    $this->get(route('security.index'))
+        ->assertOk()
+        ->assertSee('data-mobile-home-logo', false)
+        ->assertSee('href="'.route('dashboard').'"', false)
+        ->assertSee('class="mobile-bottom-nav-item is-active" data-mobile-nav-item="profile"', false)
+        ->assertSee('aria-current="page"', false);
 });
 
 test('logout clears credentials and renders auth layout without menu items', function () {
@@ -542,41 +834,24 @@ test('mobile forms use post routes without method spoofing fallbacks', function 
     expect($credentials->activeLocale())->toBe('id');
 });
 
-test('profile exposes biometrics toggle based on local state', function () {
+test('profile and settings do not expose biometrics controls', function () {
     $credentials = app(MobileCredentialStore::class);
     $credentials->storeToken('1|sanctum-token', user_payload());
     $credentials->updateAccess(['role' => ['name' => 'Administrator']]);
 
     $this->get(route('profile.edit'))
         ->assertOk()
-        ->assertSee('Enable biometrics')
-        ->assertSee('data-biometric-form', false)
-        ->assertSee('data-biometric-verified', false);
+        ->assertDontSee('Enable biometrics')
+        ->assertDontSee('Disable biometrics')
+        ->assertDontSee('data-biometric-form', false)
+        ->assertDontSee('data-biometric-verified', false);
 
-    $credentials->enableBiometrics();
-
-    $this->get(route('profile.edit'))
+    $this->get(route('settings.index'))
         ->assertOk()
-        ->assertSee('Disable biometrics')
-        ->assertSee('data-biometric-form', false)
-        ->assertSee('data-biometric-verified', false);
-});
-
-test('disabling biometrics requires a successful biometric confirmation', function () {
-    $credentials = app(MobileCredentialStore::class);
-    $credentials->storeToken('1|sanctum-token', user_payload());
-    $credentials->enableBiometrics();
-
-    $this->post(route('settings.biometrics.disable'))
-        ->assertSessionHasErrors('biometric_verified');
-
-    expect($credentials->biometricsEnabled())->toBeTrue();
-
-    $this->post(route('settings.biometrics.disable'), [
-        'biometric_verified' => '1',
-    ])->assertRedirect();
-
-    expect($credentials->biometricsEnabled())->toBeFalse();
+        ->assertDontSee('Enable biometrics')
+        ->assertDontSee('Disable biometrics')
+        ->assertDontSee('data-biometric-form', false)
+        ->assertDontSee('data-biometric-verified', false);
 });
 
 test('profile and security render as tabs under the account header', function () {
@@ -853,6 +1128,29 @@ test('security action endpoints redirect back to security on accidental get requ
 
     $this->get('/security/two-factor')
         ->assertRedirect(route('security.index'));
+
+    $this->get('/security/two-factor/recovery-codes')
+        ->assertRedirect(route('security.index').'#recovery-codes');
+});
+
+test('regenerating recovery codes always returns to the security screen', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/profile/security/two-factor/recovery-codes') => Http::response([
+            'message' => 'Regenerated.',
+            'data' => ['recovery_codes' => ['new-code']],
+        ]),
+    ]);
+
+    app(MobileCredentialStore::class)->storeToken('1|sanctum-token', user_payload());
+
+    $this->from(route('security.two-factor.recovery-codes'))
+        ->post(route('security.two-factor.recovery-codes'))
+        ->assertRedirect(route('security.index').'#recovery-codes')
+        ->assertSessionHas('status', 'Recovery codes regenerated.');
+
+    Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+        && str_contains((string) $request->url(), '/profile/security/two-factor/recovery-codes'));
 });
 
 test('password update accepts post form submissions', function () {
@@ -963,6 +1261,44 @@ test('notification status exposes unread count for the header icon badge', funct
         ->assertJson(['unread_count' => 2]);
 });
 
+test('notification polling preserves password update toast flash', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/profile/security/password') => Http::response(['message' => 'Updated.']),
+        api_url('/profile/notifications*') => Http::response([
+            'message' => 'Success.',
+            'data' => [
+                'notifications' => [],
+                'unread_count' => 0,
+            ],
+        ]),
+        api_url('/profile/security/two-factor') => Http::response([
+            'message' => 'Success.',
+            'data' => ['enabled' => false],
+        ]),
+    ]);
+
+    app(MobileCredentialStore::class)->storeToken('1|sanctum-token', user_payload());
+
+    $this->from(route('security.index'))
+        ->post(route('security.password.update'), [
+            'current_password' => 'old-password',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ])
+        ->assertRedirect(route('security.index'))
+        ->assertSessionHas('status', 'Password updated.');
+
+    $this->getJson(route('notifications.status'))
+        ->assertOk()
+        ->assertJson(['unread_count' => 0]);
+
+    $this->get(route('security.index'))
+        ->assertOk()
+        ->assertSee('Password updated.')
+        ->assertSee('data-mobile-toast', false);
+});
+
 test('selected locale changes profile and security visible text', function () {
     Http::preventStrayRequests();
     Http::fake([
@@ -980,7 +1316,8 @@ test('selected locale changes profile and security visible text', function () {
     $this->get(route('profile.edit'))
         ->assertOk()
         ->assertSee('Edit profil')
-        ->assertSee('Aktifkan biometrik')
+        ->assertSee('Simpan profil')
+        ->assertSee('Keluar')
         ->assertDontSee('Edit profile');
 
     $this->get(route('security.index'))
@@ -1187,11 +1524,13 @@ test('profile language update persists authenticated locale', function () {
     $credentials = app(MobileCredentialStore::class);
     $credentials->updateSiteConfig(site_config_payload(false));
     $credentials->storeToken('1|sanctum-token', user_payload());
+    $credentials->updateLocale('id');
 
-    $this->patch(route('profile.language.update'), ['locale' => 'fr'])
-        ->assertRedirect(route('profile.edit'));
+    $this->patch(route('profile.language.update'), ['locale' => 'zh'])
+        ->assertRedirect(route('profile.edit'))
+        ->assertSessionHas('status', '语言已更新。');
 
-    expect($credentials->activeLocale())->toBe('fr');
+    expect($credentials->activeLocale())->toBe('zh');
 });
 
 test('authenticated api requests include the active lang parameter', function () {
@@ -1222,6 +1561,46 @@ test('authenticated api requests include the active lang parameter', function ()
         && str_contains((string) $request->url(), 'lang=fr'));
     Http::assertSent(fn ($request): bool => str_contains((string) $request->url(), '/profile/access')
         && str_contains((string) $request->url(), 'lang=fr'));
+});
+
+test('token checks fail open on transient connection timeouts', function () {
+    $credentials = app(MobileCredentialStore::class);
+    $credentials->storeToken('1|sanctum-token', user_payload());
+
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/auth/check-token') => fn () => throw new ConnectionException('Connection timeout.'),
+    ]);
+
+    expect(app(MobileApiClient::class)->checkToken())->toBeTrue();
+    expect($credentials->isAuthenticated())->toBeTrue();
+});
+
+test('mobile credential store reuses the loaded credential during a request', function () {
+    $credentials = app(MobileCredentialStore::class);
+    $credentials->updateSiteConfig(site_config_payload(false));
+    $credentials->storeToken('1|sanctum-token', user_payload());
+    $credentials->updateAccess(['role' => ['name' => 'Administrator']]);
+
+    $store = new MobileCredentialStore;
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    $store->token();
+    $store->user();
+    $store->access();
+    $store->activeLocale();
+    $store->siteConfigFetchedAt();
+
+    $credentialSelects = collect(DB::getQueryLog())
+        ->filter(fn (array $query): bool => str_starts_with(strtolower((string) $query['query']), 'select')
+            && str_contains((string) $query['query'], 'mobile_credentials'))
+        ->count();
+
+    DB::disableQueryLog();
+
+    expect($credentialSelects)->toBe(1);
 });
 
 test('profile rejects languages not enabled by site config', function () {

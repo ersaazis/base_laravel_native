@@ -59,7 +59,7 @@
                     <h2 class="text-xl font-black text-vault-text">{{ __('mobile.security.authenticator_setup') }}</h2>
                     <p class="mt-1 text-sm leading-6 vault-muted">{{ __('mobile.security.authenticator_help') }}</p>
                 </div>
-                <form method="POST" action="{{ route('security.two-factor.enable') }}">
+                <form method="POST" action="{{ route('security.two-factor.enable') }}" data-spa-preserve-scroll>
                     @csrf
                     <button class="vault-btn vault-btn-primary min-h-11 px-3 text-xs" type="submit">
                         {{ $twoFactorEnabled ? __('mobile.security.refresh') : __('mobile.security.enable') }}
@@ -98,7 +98,7 @@
                         <button class="vault-btn vault-btn-primary w-full" type="submit">{{ __('mobile.security.confirm_2fa') }}</button>
                     </form>
 
-                    <form method="POST" action="{{ route('security.two-factor.cancel') }}">
+                    <form method="POST" action="{{ route('security.two-factor.cancel') }}" data-spa-preserve-scroll>
                         @csrf
                         <button class="vault-btn vault-btn-secondary w-full" type="submit">{{ __('mobile.common.cancel') }}</button>
                     </form>
@@ -121,13 +121,13 @@
         </section>
 
         @if ($twoFactorEnabled)
-        <section class="vault-card rounded-3xl p-5" data-mobile-animate>
+        <section id="recovery-codes" class="vault-card scroll-mt-6 rounded-3xl p-5" data-mobile-animate>
             <div class="flex items-center justify-between gap-3">
                 <div>
                     <h2 class="text-xl font-black text-vault-text">{{ __('mobile.security.backup_access') }}</h2>
                     <p class="mt-1 text-sm vault-muted">{{ __('mobile.security.backup_help') }}</p>
                 </div>
-                <form method="POST" action="{{ route('security.two-factor.recovery-codes') }}">
+                <form method="POST" action="{{ route('security.two-factor.recovery-codes') }}" data-spa-preserve-scroll>
                     @csrf
                     <button class="vault-btn vault-btn-secondary min-h-11 px-3 text-xs" type="submit">{{ __('mobile.security.regenerate') }}</button>
                 </form>

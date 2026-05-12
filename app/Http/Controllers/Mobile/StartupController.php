@@ -38,12 +38,6 @@ class StartupController extends Controller
             ]);
         }
 
-        if ($this->credentials->biometricsEnabled() || $this->credentials->shouldRequireUnlock()) {
-            $this->credentials->lock();
-
-            return redirect()->route('settings.unlock');
-        }
-
         return redirect()->route('dashboard');
     }
 }

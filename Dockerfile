@@ -51,6 +51,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     rsync
 
+RUN apt-get update && apt-get install -y \
+    git unzip curl \
+    && docker-php-ext-install pcntl
+
 EXPOSE 8000
 
 ENTRYPOINT ["entrypoint"]

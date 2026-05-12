@@ -12,10 +12,7 @@ return new class extends Migration
             $table->id();
             $table->text('plain_text_token')->nullable();
             $table->json('user')->nullable();
-            $table->boolean('biometrics_enabled')->default(false);
-            $table->boolean('locked')->default(false);
             $table->timestamp('last_validated_at')->nullable();
-            $table->timestamp('unlocked_at')->nullable();
             $table->timestamps();
         });
     }

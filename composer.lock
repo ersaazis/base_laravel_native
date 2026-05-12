@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6c9debcab7b3eb33ca2634f60c7b3e00",
+    "content-hash": "2a3906db8218de3298e9f7a74297c2d2",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -189,6 +189,61 @@
                 }
             ],
             "time": "2024-02-09T16:56:22+00:00"
+        },
+        {
+            "name": "codingwithrk/double-back-to-close",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/codingwithrk/double-back-to-close.git",
+                "reference": "5c8f7ee0ec24ed42f85f2c263e9179b96b6b0b99"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/codingwithrk/double-back-to-close/zipball/5c8f7ee0ec24ed42f85f2c263e9179b96b6b0b99",
+                "reference": "5c8f7ee0ec24ed42f85f2c263e9179b96b6b0b99",
+                "shasum": ""
+            },
+            "require": {
+                "nativephp/mobile": "^3.0",
+                "nativephp/mobile-dialog": "^1.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "pestphp/pest": "^3.0"
+            },
+            "type": "nativephp-plugin",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Codingwithrk\\DoubleBackToClose\\DoubleBackToCloseServiceProvider"
+                    ]
+                },
+                "nativephp": {
+                    "manifest": "nativephp.json"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Codingwithrk\\DoubleBackToClose\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "CodingWithRK",
+                    "email": "pappalarajkumar@gmail.com"
+                }
+            ],
+            "description": "A NativePHP Mobile plugin that prompts users to press back twice before exiting the app.",
+            "support": {
+                "issues": "https://github.com/codingwithrk/double-back-to-close/issues",
+                "source": "https://github.com/codingwithrk/double-back-to-close/tree/v1.0.0"
+            },
+            "time": "2026-04-15T18:36:19+00:00"
         },
         {
             "name": "dasprid/enum",
@@ -2549,20 +2604,20 @@
         },
         {
             "name": "nativephp/mobile",
-            "version": "3.2.6",
+            "version": "3.3.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/NativePHP/mobile-air.git",
-                "reference": "01bbfe4a9a1bb17e81a49dfc5408381dfd5c0db9"
+                "reference": "ddf704d743364de259b59849331aa94253b95cab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/NativePHP/mobile-air/zipball/01bbfe4a9a1bb17e81a49dfc5408381dfd5c0db9",
-                "reference": "01bbfe4a9a1bb17e81a49dfc5408381dfd5c0db9",
+                "url": "https://api.github.com/repos/NativePHP/mobile-air/zipball/ddf704d743364de259b59849331aa94253b95cab",
+                "reference": "ddf704d743364de259b59849331aa94253b95cab",
                 "shasum": ""
             },
             "require": {
-                "endroid/qr-code": "^6.1.3",
+                "endroid/qr-code": "^6.0.9",
                 "ext-dom": "*",
                 "ext-simplexml": "*",
                 "guzzlehttp/guzzle": "^7.9",
@@ -2626,9 +2681,60 @@
             ],
             "support": {
                 "issues": "https://github.com/NativePHP/mobile-air/issues",
-                "source": "https://github.com/NativePHP/mobile-air/tree/3.2.6"
+                "source": "https://github.com/NativePHP/mobile-air/tree/3.3.4"
             },
-            "time": "2026-04-28T02:27:06+00:00"
+            "time": "2026-05-09T20:16:30+00:00"
+        },
+        {
+            "name": "nativephp/mobile-dialog",
+            "version": "1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/NativePHP/mobile-dialog.git",
+                "reference": "fd0ca0d79a2f2396929f6146fef7a55c761b3dd0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/NativePHP/mobile-dialog/zipball/fd0ca0d79a2f2396929f6146fef7a55c761b3dd0",
+                "reference": "fd0ca0d79a2f2396929f6146fef7a55c761b3dd0",
+                "shasum": ""
+            },
+            "require": {
+                "nativephp/mobile": "^3.0",
+                "php": "^8.2"
+            },
+            "type": "nativephp-plugin",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Native\\Mobile\\Providers\\DialogServiceProvider"
+                    ]
+                },
+                "nativephp": {
+                    "manifest": "nativephp.json"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Native\\Mobile\\Providers\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "NativePHP",
+                    "email": "support@nativephp.com"
+                }
+            ],
+            "description": "Native alert dialogs and toast notifications for NativePHP Mobile",
+            "support": {
+                "issues": "https://github.com/NativePHP/mobile-dialog/issues",
+                "source": "https://github.com/NativePHP/mobile-dialog/tree/1.0.1"
+            },
+            "time": "2026-03-20T22:08:33+00:00"
         },
         {
             "name": "nesbot/carbon",
@@ -2804,16 +2910,16 @@
         },
         {
             "name": "nette/utils",
-            "version": "v4.1.3",
+            "version": "v4.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/utils.git",
-                "reference": "bb3ea637e3d131d72acc033cfc2746ee893349fe"
+                "reference": "7da6c396d7ebe142bc857c20479d5e70a5e1aac7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/utils/zipball/bb3ea637e3d131d72acc033cfc2746ee893349fe",
-                "reference": "bb3ea637e3d131d72acc033cfc2746ee893349fe",
+                "url": "https://api.github.com/repos/nette/utils/zipball/7da6c396d7ebe142bc857c20479d5e70a5e1aac7",
+                "reference": "7da6c396d7ebe142bc857c20479d5e70a5e1aac7",
                 "shasum": ""
             },
             "require": {
@@ -2889,9 +2995,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/utils/issues",
-                "source": "https://github.com/nette/utils/tree/v4.1.3"
+                "source": "https://github.com/nette/utils/tree/v4.1.4"
             },
-            "time": "2026-02-13T03:05:33+00:00"
+            "time": "2026-05-11T20:49:54+00:00"
         },
         {
             "name": "nikic/php-parser",

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
@@ -40,9 +41,11 @@ class MobileApiClient
         } catch (MobileApiException $exception) {
             if ($exception->status === 401) {
                 $this->credentials->forget();
+
+                return false;
             }
 
-            return false;
+            return true;
         }
     }
 
@@ -69,8 +72,8 @@ class MobileApiClient
             ->acceptJson()
             ->asJson()
             ->withQueryParameters(['lang' => $this->credentials->activeLocale()])
-            ->timeout((int) config('services.golf_api.timeout', 15))
-            ->connectTimeout((int) config('services.golf_api.connect_timeout', 5));
+            ->timeout((int) config('services.golf_api.timeout', 8))
+            ->connectTimeout((int) config('services.golf_api.connect_timeout', 2));
 
         if ($authenticated) {
             $token = $this->credentials->token();
@@ -82,14 +85,20 @@ class MobileApiClient
             $request = $request->withToken($token);
         }
 
-        $response = match (strtolower($method)) {
-            'get' => $request->get($path, $data),
-            'post' => $request->post($path, $data),
-            'patch' => $request->patch($path, $data),
-            'put' => $request->put($path, $data),
-            'delete' => $request->delete($path, $data),
-            default => throw new MobileApiException("Unsupported API method [{$method}]."),
-        };
+        try {
+            $response = match (strtolower($method)) {
+                'get' => $request->get($path, $data),
+                'post' => $request->post($path, $data),
+                'patch' => $request->patch($path, $data),
+                'put' => $request->put($path, $data),
+                'delete' => $request->delete($path, $data),
+                default => throw new MobileApiException("Unsupported API method [{$method}]."),
+            };
+        } catch (ConnectionException) {
+            $message = __('mobile.errors.api_unavailable');
+
+            throw new MobileApiException($message, 0, ['api' => [$message]]);
+        }
 
         return $this->handleResponse($response);
     }
