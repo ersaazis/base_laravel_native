@@ -38,14 +38,14 @@ class SiteConfig
     /**
      * @return array<string, mixed>
      */
-    public function refresh(bool $force = false): array
+    public function refresh(bool $force = false, ?int $timeout = null, ?int $connectTimeout = null): array
     {
         if (! $force && ! $this->shouldRefresh()) {
             return $this->config = $this->credentials->siteConfig();
         }
 
         try {
-            $response = $this->api->guest('get', '/site-config');
+            $response = $this->api->guest('get', '/site-config', timeout: $timeout, connectTimeout: $connectTimeout);
             $data = is_array($response['data'] ?? null) ? $response['data'] : [];
             $config = is_array($data['config'] ?? null) ? $data['config'] : [];
         } catch (Throwable) {

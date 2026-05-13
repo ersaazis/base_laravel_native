@@ -21,10 +21,6 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - phpunit/phpunit (PHPUNIT) - v12
 - tailwindcss (TAILWINDCSS) - v4
 
-## Skills Activation
-
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
-
 ## Conventions
 
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
@@ -55,28 +51,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 === boost rules ===
 
 # Laravel Boost
-
-## Tools
-
-- Laravel Boost is an MCP server with tools designed specifically for this application. Prefer Boost tools over manual alternatives like shell commands or file reads.
-- Use `database-query` to run read-only queries against the database instead of writing raw SQL in tinker.
-- Use `database-schema` to inspect table structure before writing migrations or models.
-- Use `get-absolute-url` to resolve the correct scheme, domain, and port for project URLs. Always use this before sharing a URL with the user.
-- Use `browser-logs` to read browser logs, errors, and exceptions. Only recent logs are useful, ignore old entries.
-
-## Searching Documentation (IMPORTANT)
-
-- Always use `search-docs` before making code changes. Do not skip this step. It returns version-specific docs based on installed packages automatically.
-- Pass a `packages` array to scope results when you know which packages are relevant.
-- Use multiple broad, topic-based queries: `['rate limiting', 'routing rate limiting', 'routing']`. Expect the most relevant results first.
-- Do not add package names to queries because package info is already shared. Use `test resource table`, not `filament 4 test resource table`.
-
-### Search Syntax
-
-1. Use words for auto-stemmed AND logic: `rate limit` matches both "rate" AND "limit".
-2. Use `"quoted phrases"` for exact position matching: `"infinite scroll"` requires adjacent words in order.
-3. Combine words and phrases for mixed queries: `middleware "rate limit"`.
-4. Use multiple queries for OR logic: `queries=["authentication", "middleware"]`.
 
 ## Artisan
 
@@ -149,17 +123,16 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 # Laravel 12
 
-- CRITICAL: ALWAYS use `search-docs` tool for version-specific Laravel documentation and updated code examples.
 - Since Laravel 11, Laravel has a new streamlined file structure which this project uses.
 
 ## Laravel 12 Structure
 
-- In Laravel 12, middleware are no longer registered in `app/Http/Kernel.php`.
+- In Laravel 12, middleware are no longer registered in `app\Http/Kernel.php`.
 - Middleware are configured declaratively in `bootstrap/app.php` using `Application::configure()->withMiddleware()`.
 - `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
 - `bootstrap/providers.php` contains application specific service providers.
-- The `app/Console/Kernel.php` file no longer exists; use `bootstrap/app.php` or `routes/console.php` for console configuration.
-- Console commands in `app/Console/Commands/` are automatically available and do not require manual registration.
+- The `app\Console/Kernel.php` file no longer exists; use `bootstrap/app.php` or `routes/console.php` for console configuration.
+- Console commands in `app\Console/Commands/` are automatically available and do not require manual registration.
 
 ## Database
 
@@ -186,31 +159,115 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
 - Do NOT delete tests without approval.
 
-=== nativephp/mobile rules ===
+=== nativephp/mobile-dialog rules ===
 
-## NativePHP Mobile
+## nativephp/dialog
 
-- NativePHP Mobile is a Laravel package for building native iOS and Android apps using PHP and native UI components. It runs a full PHP runtime directly on the device with SQLite — no web server required.
-- Documentation: `https://nativephp.com/docs/mobile/3/**`
-- IMPORTANT: Always activate the `nativephp-mobile` skill every time you work on any NativePHP functionality.
+Native alert dialogs and toast notifications for NativePHP Mobile applications.
 
-### Build Commands — Tell the User, Never Run
+### PHP Usage (Livewire/Blade)
 
-**CRITICAL: Never execute any of these commands yourself. Always instruct the user to run them manually in their terminal.**
+<code-snippet name="Alert Dialogs" lang="php">
+use Native\Mobile\Facades\Dialog;
 
-| Command | Purpose |
-|---|---|
-| `npm run build -- --mode=ios` | Build frontend assets for iOS |
-| `npm run build -- --mode=android` | Build frontend assets for Android |
-| `php artisan native:run ios` | Compile and run on iOS simulator/device |
-| `php artisan native:run android` | Compile and run on Android emulator/device |
-| `php artisan native:run ios --watch` | Build, deploy, then start hot reload — all in one |
-| `php artisan native:watch` | Hot reload (watch for file changes) |
-| `php artisan native:open` | Open project in Xcode or Android Studio |
+// Simple alert with custom buttons (max 3)
+Dialog::alert(
+    'Confirm Action',
+    'Are you sure you want to delete this item?',
+    ['Cancel', 'Delete']
+);
+</code-snippet>
 
-**Always ask which platform before giving any build or run command.** If the user hasn't specified iOS or Android, ask: "Which platform do you want to build/test on — iOS or Android?" Never assume a platform.
+<code-snippet name="Toast Notifications" lang="php">
+use Native\Mobile\Facades\Dialog;
 
-When the platform is confirmed, give the relevant command(s) above and tell the user to run it in their terminal. Do not run it yourself.
+// Display a brief toast notification
+Dialog::toast('Item saved successfully!');
+</code-snippet>
+
+### JavaScript Usage (Vue/React/Inertia)
+
+<code-snippet name="Dialogs in JavaScript" lang="javascript">
+import { dialog, on, off, Events } from '#nativephp';
+
+// Simple alert
+await dialog.alert('Confirm Action', 'Are you sure?', ['Cancel', 'Delete']);
+
+// Fluent builder API
+await dialog.alert()
+    .title('Confirm Action')
+    .message('Are you sure you want to delete this item?')
+    .buttons(['Cancel', 'Delete']);
+
+// Quick confirm dialog
+await dialog.alert().confirm('Confirm Action', 'Are you sure?');
+
+// Toast notification
+await dialog.toast('Item saved successfully!');
+</code-snippet>
+
+### Handling Alert Events
+
+#### PHP
+
+<code-snippet name="Button Press Events" lang="php">
+use Native\Mobile\Attributes\OnNative;
+use Native\Mobile\Events\Alert\ButtonPressed;
+
+#[OnNative(ButtonPressed::class)]
+public function handleAlertButton($index, $label)
+{
+    switch ($index) {
+        case 0:
+            Dialog::toast("You pressed '{$label}'");
+            break;
+        case 1:
+            $this->performAction();
+            Dialog::toast("You pressed '{$label}'");
+            break;
+    }
+}
+</code-snippet>
+
+#### Vue
+
+<code-snippet name="Button Press Events in Vue" lang="javascript">
+import { dialog, on, off, Events } from '#nativephp';
+import { onMounted, onUnmounted } from 'vue';
+
+const handleButtonPressed = (payload) => {
+    const { index, label } = payload;
+    if (index === 1) {
+        performAction();
+    }
+    dialog.toast(`You pressed '${label}'`);
+};
+
+onMounted(() => {
+    on(Events.Alert.ButtonPressed, handleButtonPressed);
+});
+
+onUnmounted(() => {
+    off(Events.Alert.ButtonPressed, handleButtonPressed);
+});
+</code-snippet>
+
+### Button Positioning
+
+- 1 button: Positive (OK/Confirm)
+- 2 buttons: Negative (Cancel) + Positive (OK/Confirm)
+- 3 buttons: Negative (Cancel) + Neutral (Maybe) + Positive (OK/Confirm)
+
+### Events
+
+- `Native\Mobile\Events\Alert\ButtonPressed` - Fired when alert button is tapped
+  - `int $index` - Button index (0-based)
+  - `string $label` - Button label text
+
+</laravel-boost-guidelines>
+
+</laravel-boost-guidelines>
+
 </laravel-boost-guidelines>
 
 </laravel-boost-guidelines>

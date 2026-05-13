@@ -260,11 +260,51 @@
             || form.target
             || form.closest('[data-no-spa]')
             || form.dataset.spa === 'false'
+            || requiresNativeFormSubmission(form)
         ) {
             return false;
         }
 
         return isSameOrigin(formTargetUrl(form));
+    }
+
+    function requiresNativeFormSubmission(form) {
+        const encoding = (form.enctype || '').toLowerCase();
+
+        if (encoding && encoding !== 'application/x-www-form-urlencoded') {
+            return true;
+        }
+
+        return Array.from(form.elements).some((element) => (
+            element instanceof HTMLInputElement
+            && element.type === 'file'
+        ));
+    }
+
+    function formDataForSubmit(form, submitter = null) {
+        if (!(submitter instanceof HTMLElement) || !submitter.hasAttribute('name')) {
+            return new FormData(form);
+        }
+
+        try {
+            return new FormData(form, submitter);
+        } catch {
+            return new FormData(form);
+        }
+    }
+
+    function urlEncodedFormBody(formData) {
+        const body = new URLSearchParams();
+
+        formData.forEach((value, key) => {
+            if (value instanceof File) {
+                return;
+            }
+
+            body.append(key, value);
+        });
+
+        return body.toString();
     }
 
     function updateHistory(mode, url, scrollTop) {
@@ -449,14 +489,14 @@
         });
     }
 
-    async function submitForm(form) {
+    async function submitForm(form, submitter = null) {
         rememberCurrentScroll();
 
         const method = (form.method || 'GET').toUpperCase();
         const beforeUrl = new URL(window.location.href);
         const beforeScrollTop = currentScrollTop();
         const actionUrl = formTargetUrl(form);
-        const formData = new FormData(form);
+        const formData = formDataForSubmit(form, submitter);
         let requestUrl = actionUrl;
         const requestOptions = {
             method,
@@ -468,7 +508,10 @@
             requestUrl = new URL(actionUrl.toString());
             requestUrl.search = query.toString();
         } else {
-            requestOptions.body = formData;
+            requestOptions.body = urlEncodedFormBody(formData);
+            requestOptions.headers = {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            };
         }
 
         try {
@@ -550,7 +593,7 @@
         }
 
         event.preventDefault();
-        submitForm(form).catch(() => {
+        submitForm(form, event.submitter).catch(() => {
             form.submit();
         });
     }

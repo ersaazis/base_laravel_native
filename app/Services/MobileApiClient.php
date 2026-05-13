@@ -17,24 +17,24 @@ class MobileApiClient
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    public function guest(string $method, string $path, array $data = []): array
+    public function guest(string $method, string $path, array $data = [], ?int $timeout = null, ?int $connectTimeout = null): array
     {
-        return $this->send($method, $path, $data, false);
+        return $this->send($method, $path, $data, false, $timeout, $connectTimeout);
     }
 
     /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    public function authenticated(string $method, string $path, array $data = []): array
+    public function authenticated(string $method, string $path, array $data = [], ?int $timeout = null, ?int $connectTimeout = null): array
     {
-        return $this->send($method, $path, $data, true);
+        return $this->send($method, $path, $data, true, $timeout, $connectTimeout);
     }
 
-    public function checkToken(): bool
+    public function checkToken(?int $timeout = null, ?int $connectTimeout = null): bool
     {
         try {
-            $this->authenticated('get', '/auth/check-token');
+            $this->authenticated('get', '/auth/check-token', timeout: $timeout, connectTimeout: $connectTimeout);
             $this->credentials->markValidated();
 
             return true;
@@ -64,7 +64,7 @@ class MobileApiClient
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function send(string $method, string $path, array $data, bool $authenticated): array
+    private function send(string $method, string $path, array $data, bool $authenticated, ?int $timeout, ?int $connectTimeout): array
     {
         $this->openApi->assertOperation($method, $path);
 
@@ -72,8 +72,8 @@ class MobileApiClient
             ->acceptJson()
             ->asJson()
             ->withQueryParameters(['lang' => $this->credentials->activeLocale()])
-            ->timeout((int) config('services.golf_api.timeout', 8))
-            ->connectTimeout((int) config('services.golf_api.connect_timeout', 2));
+            ->timeout($this->seconds($timeout, 'timeout', 8))
+            ->connectTimeout($this->seconds($connectTimeout, 'connect_timeout', 2));
 
         if ($authenticated) {
             $token = $this->credentials->token();
@@ -101,6 +101,11 @@ class MobileApiClient
         }
 
         return $this->handleResponse($response);
+    }
+
+    private function seconds(?int $override, string $configKey, int $fallback): int
+    {
+        return max(1, $override ?? (int) config("services.golf_api.{$configKey}", $fallback));
     }
 
     /**

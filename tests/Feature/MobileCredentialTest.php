@@ -155,7 +155,9 @@ test('startup renders site config branding', function () {
     $this->get(route('startup'))
         ->assertOk()
         ->assertSee('Golf Specialist')
-        ->assertSee('https://example.com/logo.png');
+        ->assertSee('https://example.com/logo.png')
+        ->assertDontSee('Checking your session')
+        ->assertDontSee('animate-spin', false);
 });
 
 test('startup loading screen does not render a header bar', function () {
@@ -168,6 +170,55 @@ test('startup loading screen does not render a header bar', function () {
         ->assertDontSee('border-b border-vault-border/40 bg-vault-bg', false);
 });
 
+test('android native splash uses app logo branding instead of loading state', function () {
+    $activity = file_get_contents(base_path('nativephp/android/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt'));
+    $webViewManager = file_get_contents(base_path('nativephp/android/app/src/main/java/com/nativephp/mobile/network/WebViewManager.kt'));
+    $laravelEnvironment = file_get_contents(base_path('nativephp/android/app/src/main/java/com/nativephp/mobile/bridge/LaravelEnvironment.kt'));
+    $manifest = file_get_contents(base_path('nativephp/android/app/src/main/AndroidManifest.xml'));
+    $strings = file_get_contents(base_path('nativephp/android/app/src/main/res/values/strings.xml'));
+    $launcherBackground = file_get_contents(base_path('nativephp/android/app/src/main/res/drawable/ic_launcher_background.xml'));
+    $nativeConfig = file_get_contents(config_path('nativephp.php'));
+    $envExample = file_get_contents(base_path('.env.example'));
+
+    expect($activity)
+        ->toContain('startup_logo')
+        ->toContain('contentDescription = "Golf Web Specialist 1 logo"')
+        ->toContain('text = "Golf Web Specialist 1"')
+        ->toContain('fun hideStartupSplashIfReady')
+        ->toContain('scheduleStartupSplashFallback()')
+        ->toContain('path == "/" || path == "/startup/check"')
+        ->not->toContain('CircularProgressIndicator')
+        ->not->toContain('text = "Checking your session"')
+        ->not->toContain('// Hide splash screen after URL is loaded')
+        ->not->toContain('text = "Loading');
+
+    expect($webViewManager)->toContain('hideStartupSplashIfReady(url)');
+
+    expect($laravelEnvironment)
+        ->toContain('return "/startup/check"')
+        ->not->toContain('using default: /"');
+
+    expect($nativeConfig)->toContain("'start_url' => env('NATIVEPHP_START_URL', '/startup/check')");
+    expect($envExample)
+        ->toContain('APP_NAME="Golf Web Specialist 1"')
+        ->toContain('NATIVEPHP_START_URL=/startup/check');
+
+    expect($manifest)->toContain('android:label="Golf Web Specialist 1"');
+    expect($strings)->toContain('<string name="app_name">Golf Web Specialist 1</string>');
+    expect($launcherBackground)->toContain('<solid android:color="#050505"/>');
+});
+
+test('native app logo assets are available for android icon and splash generation', function () {
+    $icon = getimagesize(public_path('icon.png'));
+    $splash = getimagesize(public_path('splash.png'));
+    $darkSplash = getimagesize(public_path('splash-dark.png'));
+
+    expect(public_path('native-logo.png'))->toBeFile()
+        ->and($icon)->toMatchArray([1024, 1024])
+        ->and($splash)->toMatchArray([1080, 1920])
+        ->and($darkSplash)->toMatchArray([1080, 1920]);
+});
+
 test('startup check redirects guests to login', function () {
     Http::preventStrayRequests();
     Http::fake([
@@ -175,6 +226,23 @@ test('startup check redirects guests to login', function () {
     ]);
 
     $this->post(route('startup.check'))->assertRedirect(route('login'));
+});
+
+test('startup check fails open when startup api calls timeout', function () {
+    config([
+        'services.golf_api.startup_timeout' => 1,
+        'services.golf_api.startup_connect_timeout' => 1,
+    ]);
+
+    app(MobileCredentialStore::class)->storeToken('1|sanctum-token', user_payload());
+
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/site-config') => fn () => throw new ConnectionException('Connection timeout.'),
+        api_url('/auth/check-token') => fn () => throw new ConnectionException('Connection timeout.'),
+    ]);
+
+    $this->post(route('startup.check'))->assertRedirect(route('dashboard'));
 });
 
 test('startup check has get and javascript fallback for native jump webviews', function () {
@@ -188,13 +256,52 @@ test('startup check has get and javascript fallback for native jump webviews', f
         ->assertSee('data-startup-check', false)
         ->assertSee('method="GET"', false)
         ->assertSee('data-startup-check-url', false)
+        ->assertSee('data-startup-check-delay="120"', false)
+        ->assertSee('data-startup-fallback-delay="450"', false)
         ->assertSee('<noscript>', false)
         ->assertSee('http-equiv="refresh"', false)
         ->assertSee('window.location.replace', false)
+        ->assertDontSee('1600', false)
         ->assertDontSee('startupForm.submit()', false)
         ->assertDontSee('startupForm.requestSubmit()', false);
 
     $this->get(route('startup.check'))->assertRedirect(route('login'));
+});
+
+test('startup path uses short api timeout configuration', function () {
+    $services = file_get_contents(config_path('services.php'));
+    $startupController = file_get_contents(app_path('Http/Controllers/Mobile/StartupController.php'));
+    $apiClient = file_get_contents(app_path('Services/MobileApiClient.php'));
+    $siteConfig = file_get_contents(app_path('Services/SiteConfig.php'));
+    $script = file_get_contents(resource_path('js/app.js'));
+    $startupFormScript = Str::between($script, 'function initializeStartupForm()', 'function animateIn()');
+    $envExample = file_get_contents(base_path('.env.example'));
+
+    expect($services)
+        ->toContain("'startup_timeout' => (int) env('GOLF_API_STARTUP_TIMEOUT', 2)")
+        ->toContain("'startup_connect_timeout' => (int) env('GOLF_API_STARTUP_CONNECT_TIMEOUT', 1)");
+
+    expect($startupController)
+        ->toContain("config('services.golf_api.startup_timeout', 2)")
+        ->toContain("config('services.golf_api.startup_connect_timeout', 1)")
+        ->toContain('timeout: $this->startupTimeout()')
+        ->toContain('connectTimeout: $this->startupConnectTimeout()');
+
+    expect($apiClient)
+        ->toContain('?int $timeout = null')
+        ->toContain('?int $connectTimeout = null')
+        ->toContain('config("services.golf_api.{$configKey}", $fallback)');
+
+    expect($siteConfig)->toContain("guest('get', '/site-config', timeout: \$timeout, connectTimeout: \$connectTimeout)");
+
+    expect($startupFormScript)
+        ->toContain('startupForm.dataset.startupCheckDelay')
+        ->toContain('Math.max(0, delay)')
+        ->not->toContain('}, 650);');
+
+    expect($envExample)
+        ->toContain('GOLF_API_STARTUP_TIMEOUT=2')
+        ->toContain('GOLF_API_STARTUP_CONNECT_TIMEOUT=1');
 });
 
 test('startup check accepts native jump auto submits without a csrf cookie', function () {
@@ -379,6 +486,16 @@ test('mobile shell uses svelte spa navigation', function () {
         ->toContain("cache: 'no-store'")
         ->toContain("'Cache-Control': 'no-cache'")
         ->toContain("Pragma: 'no-cache'")
+        ->toContain('function requiresNativeFormSubmission')
+        ->toContain("encoding !== 'application/x-www-form-urlencoded'")
+        ->toContain("element.type === 'file'")
+        ->toContain('function formDataForSubmit')
+        ->toContain('new FormData(form, submitter)')
+        ->toContain('function urlEncodedFormBody')
+        ->toContain('const formData = formDataForSubmit(form, submitter)')
+        ->toContain('requestOptions.body = urlEncodedFormBody(formData)')
+        ->toContain("'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'")
+        ->toContain('submitForm(form, event.submitter)')
         ->toContain('let navigationVersion = 0')
         ->toContain('function nextNavigationVersion')
         ->toContain('function isCurrentNavigation')
@@ -399,11 +516,64 @@ test('mobile shell uses svelte spa navigation', function () {
         ->toContain("if (error instanceof DOMException && error.name === 'AbortError')")
         ->toContain('abortController === controller')
         ->toContain("historyMode: 'replace'")
-        ->not->toContain('mobileSpaNavigating');
+        ->not->toContain('mobileSpaNavigating')
+        ->not->toContain('requestOptions.body = formData');
 
     expect(array_key_exists('svelte', $package['devDependencies']))->toBeTrue();
     expect(array_key_exists('@sveltejs/vite-plugin-svelte', $package['devDependencies']))->toBeTrue();
     expect($viteConfig)->toContain('svelte()');
+});
+
+test('mobile native android form fields stay compatible with spa submission', function () {
+    $mobileViews = collect([
+        'views/mobile/auth/forgot-password.blade.php',
+        'views/mobile/auth/login.blade.php',
+        'views/mobile/auth/reset-password.blade.php',
+        'views/mobile/auth/signup.blade.php',
+        'views/mobile/auth/two-factor-challenge.blade.php',
+        'views/mobile/notifications/index.blade.php',
+        'views/mobile/partials/language-selector.blade.php',
+        'views/mobile/profile/edit.blade.php',
+        'views/mobile/security/index.blade.php',
+        'views/mobile/settings/index.blade.php',
+        'views/mobile/startup.blade.php',
+    ])->map(fn (string $view): string => file_get_contents(resource_path($view)))->implode("\n");
+
+    $field = file_get_contents(resource_path('views/mobile/partials/field.blade.php'));
+    $languageSelector = file_get_contents(resource_path('views/mobile/partials/language-selector.blade.php'));
+    $spa = file_get_contents(resource_path('js/mobile-spa.svelte'));
+
+    expect($mobileViews)
+        ->not->toContain('enctype="multipart/form-data"')
+        ->not->toContain("enctype='multipart/form-data'")
+        ->not->toContain('type="file"')
+        ->not->toContain("type='file'");
+
+    expect($field)->toContain('name="{{ $name }}"');
+
+    expect($mobileViews)
+        ->toContain("['name' => 'name'")
+        ->toContain("['name' => 'email'")
+        ->toContain("['name' => 'password'")
+        ->toContain("['name' => 'password_confirmation'")
+        ->toContain("['name' => 'token'")
+        ->toContain("['name' => 'code'")
+        ->toContain("['name' => 'recovery_code'")
+        ->toContain("['name' => 'current_password'")
+        ->toContain("['name' => 'two_factor_password'");
+
+    expect($languageSelector)
+        ->toContain('name="redirect_to"')
+        ->toContain('name="locale"')
+        ->toContain('onchange="this.form.requestSubmit()"');
+
+    expect($spa)
+        ->toContain('function formDataForSubmit')
+        ->toContain('new FormData(form, submitter)')
+        ->toContain('function urlEncodedFormBody')
+        ->toContain('new URLSearchParams(formData)')
+        ->toContain('requestOptions.body = urlEncodedFormBody(formData)')
+        ->toContain("'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'");
 });
 
 test('mobile runtime avoids jump hot reload and expensive webview effects', function () {

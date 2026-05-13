@@ -144,12 +144,13 @@ function initializeStartupForm() {
 
     if (startupForm instanceof HTMLFormElement && startupForm.dataset.autoSubmitted !== 'true') {
         startupForm.dataset.autoSubmitted = 'true';
+        const delay = Number(startupForm.dataset.startupCheckDelay || 120);
 
         window.setTimeout(() => {
             if (startupForm.isConnected) {
                 window.location.replace(startupForm.dataset.startupCheckUrl || startupForm.action);
             }
-        }, 650);
+        }, Math.max(0, delay));
     }
 }
 
