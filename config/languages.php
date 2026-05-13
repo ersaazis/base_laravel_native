@@ -9,5 +9,6 @@ return [
         'id' => ['name' => 'Indonesian', 'native_name' => 'Indonesia'],
         'de' => ['name' => 'German', 'native_name' => 'Deutsch'],
         'fr' => ['name' => 'French', 'native_name' => 'Français'],
+        'ja' => ['name' => 'Japanese', 'native_name' => '日本語'],
     ],
 ];

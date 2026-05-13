@@ -1528,6 +1528,36 @@ test('selected locale changes dashboard visible text in chinese', function () {
         ->assertDontSee('Verified');
 });
 
+test('selected locale changes dashboard visible text in japanese', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        api_url('/profile') => Http::response([
+            'message' => 'Success.',
+            'data' => ['user' => user_payload()],
+        ]),
+        api_url('/profile/access') => Http::response([
+            'message' => 'Success.',
+            'data' => ['role' => ['name' => 'Administrator'], 'permissions' => []],
+        ]),
+        api_url('/profile/notifications*') => Http::response([
+            'message' => 'Success.',
+            'data' => [],
+        ]),
+    ]);
+
+    $credentials = app(MobileCredentialStore::class);
+    $credentials->updateSiteConfig(site_config_payload(false));
+    $credentials->updateLocale('ja');
+    $credentials->storeToken('1|sanctum-token', user_payload());
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('アカウント概要')
+        ->assertSee('確認済み')
+        ->assertDontSee('Account overview')
+        ->assertDontSee('Verified');
+});
+
 test('mobile locale files avoid english fallback strings on visible labels', function () {
     $englishStrings = mobile_translation_strings(require base_path('lang/en/mobile.php'));
     $allowedIdenticalTranslations = [
@@ -1537,7 +1567,7 @@ test('mobile locale files avoid english fallback strings on visible labels', fun
         'profile.name',
     ];
 
-    foreach (['zh', 'es', 'id', 'de', 'fr'] as $locale) {
+    foreach (['zh', 'es', 'id', 'de', 'fr', 'ja'] as $locale) {
         $localizedStrings = mobile_translation_strings(require base_path("lang/{$locale}/mobile.php"));
 
         expect(array_diff_key($englishStrings, $localizedStrings))->toBeEmpty();
@@ -1844,6 +1874,7 @@ function site_config_payload(bool $registrationEnabled, array $overrides = []): 
                 ['locale' => 'id', 'name' => 'Indonesian', 'native_name' => 'Indonesia'],
                 ['locale' => 'de', 'name' => 'German', 'native_name' => 'Deutsch'],
                 ['locale' => 'fr', 'name' => 'French', 'native_name' => 'Français'],
+                ['locale' => 'ja', 'name' => 'Japanese', 'native_name' => '日本語'],
             ],
         ],
     ], $overrides);
